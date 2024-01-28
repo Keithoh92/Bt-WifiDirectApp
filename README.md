@@ -1,2 +1,2 @@
 # Bt-WifiDirectApp
-A Bluetooth and Wifi direct practice app
+A Bluetooth and Wifi direct messaging app
