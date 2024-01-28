@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#262625</color> <!-- Android -->
+    <color name="secondary">#333233</color>
+    <color name="tertiary">#42a5f5</color>
+    <color name="primaryDark">@color/primary</color> <!-- Android -->
+    <color name="primaryLight">@color/material_gray_050</color> <!-- Android -->
+
+    <color name="material_divider">@color/material_gray_500</color>
+    <color name="material_text_white">#DEffffff</color> <!-- With 0.87 Alpha-->
+    <color name="material_text_black">#cc000000</color> <!-- With 0.87 Alpha-->
+    <color name="material_text_dark_gray">#aa000000</color>
+
+
+    <color name="material_gray">@color/material_gray_700</color>
+    <color name="material_black">#000</color>
+    <color name="material_white">#fafafa</color>
+    <color name="material_cream_white">#efebe9</color>
+    <color name="material_red">#d52a24</color>
+    <color name="material_green">#66bb6a</color>
+    <color name="material_yellow">#e8af26</color>
+    <color name="material_blue">#42a5f5</color>
+    <color name="delete_btn">#000</color>
+
+
+    <color name="material_gray_050">#FAFAFA</color>
+    <color name="material_gray_100">#F5F5F5</color>
+    <color name="material_gray_200">#EEEEEE</color>
+    <color name="material_gray_300">#E0E0E0</color>
+    <color name="material_gray_400">#BDBDBD</color>
+    <color name="material_gray_500">#9E9E9E</color>
+    <color name="material_gray_600">#757575</color>
+    <color name="material_gray_700">#616161</color>
+    <color name="material_gray_800">#424242</color>
+    <color name="material_gray_900">#212121</color>
+</resources>
