@@ -20,47 +20,46 @@ data class BluetoothUIState(
     val errorMessage: String? = null,
     val discoverableSwitchIsChecked: Boolean = false,
     val btServerSwitchIsChecked: Boolean = true,
+    val wifiServerSwitchIsChecked: Boolean = true,
     val messagesReceived: List<BluetoothMessageReceived> = emptyList(),
     val messagesSent: List<BluetoothMessageSend> = emptyList(),
     val isConnected: Boolean = false,
-    val connectedDevice: BluetoothDeviceDomain? = null
+    val connectedDevice: BluetoothDeviceDomain? = null,
+    val isBTScanRefreshing: Boolean = false
 ) {
-    private val latestMessage: BluetoothMessageReceived?
+    private val latestReceivedMessage: BluetoothMessageReceived?
         get() = messagesReceived.maxByOrNull { it.timeReceived }
 
-    val size: String
-        get() = latestMessage?.sizeOfMessage ?: ""
+    private val latestSentMessage: BluetoothMessageSend?
+        get() = messagesSent.maxByOrNull { it.timeSent }
 
-    val timeTaken: String?
-        get() = if (latestMessage == null) {
+    val size: String
+        get() = latestReceivedMessage?.sizeOfMessage ?: ""
+
+    val timeTakenReceived: String?
+        get() = if (latestReceivedMessage == null) {
             null
         } else {
-            val duration = Duration(latestMessage?.timeSent, latestMessage?.timeReceived)
+            val duration = Duration(
+                latestReceivedMessage?.timeSent,
+                latestReceivedMessage?.timeReceived
+            )
             val secondsDifference = abs(duration.standardSeconds / 1.0)
             val time = String.format("%.0f", secondsDifference)
             "$time seconds"
         }
 
-    val timeSentBySender: String?
-        get() = if (latestMessage == null) {
-            null
-        } else {
-            latestMessage?.timeSent?.let { getTimeAsString(it) }
-        }
+    val timeSentAtSender: String
+        get() = latestSentMessage?.timeSent?.let { getTimeAsString(it) } ?: ""
 
-    val timeReceived: String?
-        get() = if (latestMessage == null) {
-            null
-        } else {
-            latestMessage?.timeReceived?.let { getTimeAsString(it) }
-        }
+    val timeSentBySenderReceived: String
+        get() = latestReceivedMessage?.timeSent?.let { getTimeAsString(it) } ?: ""
 
-//    val connectedDevice: String
-//        get() = if (connectedDevices.isNotEmpty()) connectedDevices.first().name else "No Device Connected"
+    val timeReceived: String
+        get() = latestReceivedMessage?.timeReceived?.let { getTimeAsString(it) } ?: ""
 
     private fun getTimeAsString(dateTime: DateTime): String {
         val timeFormat = DateTimeFormat.forPattern("HH:mm:ss.SS")
         return timeFormat.print(dateTime)
-//        return trimmed.substring(0, trimmed.length - 1)
     }
 }

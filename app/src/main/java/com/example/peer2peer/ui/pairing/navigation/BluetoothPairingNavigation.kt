@@ -5,7 +5,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
-import com.example.peer2peer.ui.pairing.view.BluetoothPairingMain
+import com.example.peer2peer.ui.pairing.BluetoothPairingMain
 import com.example.peer2peer.ui.pairing.view.BluetoothViewModel
 
 const val btConnectionRoute = "bt_connection_route"

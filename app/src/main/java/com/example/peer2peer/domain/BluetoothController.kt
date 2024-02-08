@@ -20,10 +20,7 @@ interface BluetoothController {
 
     fun startBluetoothServer()
 
-//    fun startBluetoothServerHome(): Flow<ConnectionTransfer>
     fun disconnectFromBT()
-
-//    fun pairDevice()
 
     fun connectToDevice(device: BluetoothDevice)
 

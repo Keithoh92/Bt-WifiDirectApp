@@ -8,7 +8,7 @@ import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
 import com.example.peer2peer.domain.BluetoothController
 import com.example.peer2peer.domain.BluetoothDeviceDomain
 import com.example.peer2peer.domain.model.BluetoothDevice
-import com.example.peer2peer.ui.pairing.PairingEffect
+import com.example.peer2peer.ui.pairing.effect.PairingEffect
 import com.example.peer2peer.ui.pairing.event.PairingEvent
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
@@ -58,9 +58,7 @@ class BluetoothViewModel @Inject constructor(
 
     var discoverable: (() -> Unit)? = null
 
-    init {
-        startScan()
-    }
+    init { startScan() }
 
     fun onEvent(event: PairingEvent) {
         when (event) {
@@ -160,8 +158,8 @@ class BluetoothViewModel @Inject constructor(
         }
     }
 
-    fun sendMessage(message: String) = viewModelScope.launch {
-        Log.d("TINTIN", "sendMessage")
+    private fun sendMessage(message: String) = viewModelScope.launch {
+        PLog.d("Sending message")
         val bluetoothMessage = bluetoothController.trySendMessage(message)
         if (bluetoothMessage != null) {
             _uiState.update { it.copy(
@@ -171,78 +169,13 @@ class BluetoothViewModel @Inject constructor(
     }
 
     private fun startScan() = viewModelScope.launch {
-        Log.d("startScan", "startScan")
+        PLog.d("startScan")
+        _uiState.update { it.copy(isBTScanRefreshing = true) }
         bluetoothController.startDiscovery()
         delay(30000)
+        _uiState.update { it.copy(isBTScanRefreshing = false) }
         stopScan()
     }
 
     private fun stopScan() = bluetoothController.stopDiscovery()
-
-//    private fun Flow<ConnectionResult>.listen(): Job {
-//        return onEach { result ->
-//            when (result) {
-//                ConnectionResult.ConnectionEstablishedServer -> {
-//                    Log.d("TINTIN", "ConnectionEstablishedServer")
-//                    _bottomSheetUIState.update {
-//                        it.copy(
-//                            isConnected = true,
-//                            isConnecting = false,
-//                            errorMessage = null
-//                        )
-//                    }
-//                    _uiState.update { it.copy(
-//                        discoverableSwitchIsChecked = false
-//                    ) }
-//                }
-//
-//                is ConnectionResult.TransferSucceeded -> {
-//                    Log.d("TINTIN", "TransferSucceeded")
-//                    _uiState.update { it.copy(
-//                        messages = it.messagesReceived + result.message
-//                    ) }
-//                }
-//
-//                is ConnectionResult.ConnectionEstablishedClient -> {
-//                    Log.d("TINTIN", "ConnectionEstablishedClient")
-//                    _bottomSheetUIState.update {
-//                        it.copy(
-//                            device = result.device,
-//                            isConnected = true,
-//                            isConnecting = false,
-//                            errorMessage = null
-//                        )
-//                    }
-//                    _uiState.update { it.copy(
-//                        discoverableSwitchIsChecked = false
-//                    ) }
-//                }
-//
-//                is ConnectionResult.Error -> {
-//                    Log.d("TINTIN", "Error")
-//                    _bottomSheetUIState.update {
-//                        it.copy(
-//                            isConnected = false,
-//                            isConnecting = false,
-//                            errorMessage = result.message
-//                        )
-//                    }
-//                }
-//            }
-//        }.catch { throwable ->
-//            Log.d("BTViewModel 229", "Closing connection")
-////            bluetoothController.closeConnection()
-//            _bottomSheetUIState.update {
-//                it.copy(
-//                    isConnected = false,
-//                    isConnecting = false,
-//                )
-//            }
-//        }.launchIn(viewModelScope)
-//    }
-
-    override fun onCleared() {
-        super.onCleared()
-//        bluetoothController.release()
-    }
 }

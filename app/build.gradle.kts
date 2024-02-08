@@ -88,6 +88,10 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
+    // Lottie
+    implementation("com.airbnb.android:lottie:6.0.0")
+    implementation("com.airbnb.android:lottie-compose:6.0.0")
+
     // Kotlin Extensions and Coroutines support for Room
     implementation("androidx.room:room-ktx:2.6.1")
 

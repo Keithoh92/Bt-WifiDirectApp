@@ -1,4 +1,4 @@
-package com.example.peer2peer.ui.pairing
+package com.example.peer2peer.ui.pairing.effect
 
 sealed interface PairingEffect {
     data class Toast(val message: String) : PairingEffect

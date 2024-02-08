@@ -1,11 +1,12 @@
-package com.example.peer2peer.ui.pairing.view
+package com.example.peer2peer.ui.pairing
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import com.example.peer2peer.ui.pairing.PairingEffect
+import com.example.peer2peer.ui.pairing.effect.PairingEffect
 import com.example.peer2peer.ui.pairing.event.PairingEvent
+import com.example.peer2peer.ui.pairing.view.BluetoothViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 const val homeScreenRoute = "home_screen_route"

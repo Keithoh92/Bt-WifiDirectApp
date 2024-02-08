@@ -1,4 +1,4 @@
-package com.example.peer2peer.ui.pairing.view
+package com.example.peer2peer.ui.pairing
 
 import android.content.res.Configuration
 import android.widget.Toast
@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Message
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.OnlinePrediction
 import androidx.compose.material.icons.outlined.Refresh
@@ -50,15 +49,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.peer2peer.R
 import com.example.peer2peer.domain.model.BluetoothDevice
 import com.example.peer2peer.ui.common.CardTextField
 import com.example.peer2peer.ui.pairing.event.PairingEvent
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
+import com.example.peer2peer.ui.pairing.view.BluetoothPairingScreenLandscape
+import com.example.peer2peer.ui.pairing.view.BluetoothScanningLottieAnim
+import com.example.peer2peer.ui.pairing.view.PairingBottomSheet
 import com.example.peer2peer.ui.theme.P2PTheme3
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -126,284 +130,7 @@ fun BluetoothPairingScreen(
             Surface(color = MaterialTheme.colorScheme.primary) {
 
                 if (isLandscape) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(32.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Paired Devices",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                IconButton(
-                                    onClick = { onEvent(PairingEvent.OnRefreshClicked) },
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Discoverable",
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Light
-                                            ),
-                                            color = Color.White,
-                                        )
-                                        Switch(
-                                            checked = uiState.discoverableSwitchIsChecked,
-                                            onCheckedChange = { onEvent(PairingEvent.OnClickDiscoverable) }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Card(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .fillMaxSize(),
-                                shape = RoundedCornerShape(15.dp),
-                                border = BorderStroke(2.dp, Color.Black),
-                                backgroundColor = MaterialTheme.colorScheme.secondary
-                            ) {
-                                LazyColumn(modifier = Modifier.padding(16.dp), content = {
-                                    items(uiState.pairedDevices.size) {
-                                        val device = uiState.pairedDevices[it]
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            CardTextField(
-                                                modifier = Modifier
-                                                    .padding(vertical = 16.dp)
-                                                    .clickable {
-                                                        onEvent(
-                                                            PairingEvent.OnClickPairedDevice(
-                                                                device
-                                                            )
-                                                        )
-                                                    },
-                                                text = device.name.ifEmpty { "Unidentified" },
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-
-                                            Spacer(modifier = Modifier.weight(1f))
-                                            AnimatedVisibility(
-                                                visible = uiState.connectedDevice == device,
-                                                modifier = Modifier.padding(horizontal = 4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.OnlinePrediction,
-                                                    contentDescription = null,
-                                                    tint = Color.Green,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-
-                                            Icon(
-                                                imageVector = Icons.Outlined.MoreVert,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier
-                                                    .size(20.dp)
-                                                    .clickable {
-                                                        onEvent(PairingEvent.OnClickMoreVert(device))
-                                                    }
-                                            )
-                                        }
-
-                                        AnimatedVisibility(
-                                            visible = uiState.pairedMoreVertClicked.address ==
-                                                    device.address
-                                        ) {
-                                            Row(
-                                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp)
-                                            ) {
-                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Bluetooth,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                    Text(
-                                                        text = "Connect",
-                                                        color = Color.White,
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                }
-
-                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Delete,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                    Text(
-                                                        text = "Remove",
-                                                        color = Color.White,
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                }
-
-                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Edit,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                    Text(
-                                                        text = "Rename",
-                                                        color = Color.White,
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        if (it < uiState.pairedDevices.size) {
-                                            Divider(modifier = Modifier.fillMaxWidth(), color = Color.LightGray)
-                                        }
-                                    }
-                                })
-                            }
-                        }
-
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Devices Nearby",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                                IconButton(onClick = { onEvent(PairingEvent.OnSendClicked) }) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Send",
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Light
-                                            ),
-                                            color = Color.White,
-                                        )
-                                        Icon(imageVector = Icons.Outlined.Message, contentDescription = "", tint = Color.White)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.weight(1f))
-                                IconButton(
-                                    onClick = { onEvent(PairingEvent.OnRefreshClicked) },
-                                    modifier = Modifier.padding(16.dp),
-                                    interactionSource = MutableInteractionSource()
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Refresh",
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Light
-                                            ),
-                                            color = Color.White,
-                                        )
-                                        Icon(imageVector = Icons.Outlined.Refresh, contentDescription = "", tint = Color.White)
-                                    }
-                                }
-                            }
-
-                            Card(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .fillMaxSize(),
-                                shape = RoundedCornerShape(15.dp),
-                                border = BorderStroke(2.dp, Color.Black),
-                                backgroundColor = MaterialTheme.colorScheme.secondary
-                            ) {
-                                LazyColumn(modifier = Modifier.padding(16.dp), content = {
-                                    items(uiState.scannedDevices.size) {
-                                        val device = uiState.scannedDevices[it]
-
-                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                            CardTextField(
-                                                modifier = Modifier
-                                                    .padding(vertical = 16.dp)
-                                                    .clickable {
-                                                        onEvent(
-                                                            PairingEvent.OnClickNearbyDevice(
-                                                                device
-                                                            )
-                                                        )
-                                                    },
-                                                text = device.name.ifEmpty { "Unidentified" },
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-
-                                            Spacer(modifier = Modifier.weight(1f))
-
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(5.dp)
-                                            ) {
-                                                Button(
-                                                    onClick = { onEvent(PairingEvent.OnClickNearbyDevice(device)) },
-                                                    border = BorderStroke(1.dp, Color.LightGray),
-                                                    shape = RoundedCornerShape(15.dp),
-                                                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                                        containerColor = MaterialTheme.colorScheme.primary
-                                                    ),
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Bluetooth,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
-                                                    Text(text = "Pair", color = Color.White)
-                                                }
-                                            }
-                                        }
-
-                                        if (it < uiState.scannedDevices.size) {
-                                            Divider(modifier = Modifier.fillMaxWidth(), color = Color.LightGray)
-                                        }
-                                    }
-                                })
-                            }
-                        }
-                    }
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(16.dp),
-//                        horizontalAlignment = Alignment.CenterHorizontally,
-//                        modifier = Modifier.fillMaxWidth()
-//                    ) {
-//
-//
-//                        // Scan devices button
-//                        // List of scanned devices
-//
-//                        // Paired Devices title
-//                        // List of paired devices
-//                    }
+                    BluetoothPairingScreenLandscape(bluetoothPairingUIState, onEvent)
                 } else {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -415,7 +142,7 @@ fun BluetoothPairingScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Paired Devices",
+                                    text = stringResource(id = R.string.paired_devices_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     color = Color.White,
                                     modifier = Modifier.padding(16.dp)
@@ -430,7 +157,7 @@ fun BluetoothPairingScreen(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = "Discoverable",
+                                            text = stringResource(id = R.string.discoverable_switch),
                                             style = MaterialTheme.typography.titleSmall.copy(
                                                 fontWeight = FontWeight.Light
                                             ),
@@ -470,7 +197,9 @@ fun BluetoothPairingScreen(
                                                             )
                                                         )
                                                     },
-                                                text = device.name.ifEmpty { "Unidentified" },
+                                                text = device.name.ifEmpty {
+                                                    stringResource(id = R.string.unidentified)
+                                                },
                                                 style = MaterialTheme.typography.bodyLarge
                                             )
 
@@ -517,7 +246,7 @@ fun BluetoothPairingScreen(
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                     Text(
-                                                        text = "Connect",
+                                                        text = stringResource(id = R.string.connect_btn),
                                                         color = Color.White,
                                                         style = MaterialTheme.typography.labelSmall
                                                     )
@@ -531,7 +260,7 @@ fun BluetoothPairingScreen(
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                     Text(
-                                                        text = "Remove",
+                                                        text = stringResource(id = R.string.remove_btn),
                                                         color = Color.White,
                                                         style = MaterialTheme.typography.labelSmall
                                                     )
@@ -545,7 +274,7 @@ fun BluetoothPairingScreen(
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                     Text(
-                                                        text = "Rename",
+                                                        text = stringResource(id = R.string.rename_btn),
                                                         color = Color.White,
                                                         style = MaterialTheme.typography.labelSmall
                                                     )
@@ -566,44 +295,40 @@ fun BluetoothPairingScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Devices Nearby",
+                                    text = stringResource(id = R.string.devices_nearby_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     color = Color.White,
                                     modifier = Modifier.padding(16.dp)
                                 )
-                                IconButton(onClick = { onEvent(PairingEvent.OnSendClicked) }) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Send",
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Light
-                                            ),
-                                            color = Color.White,
-                                        )
-                                        Icon(imageVector = Icons.Outlined.Message, contentDescription = "", tint = Color.White)
-                                    }
-                                }
+
                                 Spacer(modifier = Modifier.weight(1f))
-                                IconButton(
-                                    onClick = { onEvent(PairingEvent.OnRefreshClicked) },
-                                    modifier = Modifier.padding(16.dp),
-                                    interactionSource = MutableInteractionSource()
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+
+                                AnimatedVisibility(visible = uiState.isBTScanRefreshing) {
+                                    BluetoothScanningLottieAnim()
+                                }
+                                AnimatedVisibility(visible = !uiState.isBTScanRefreshing) {
+                                    IconButton(
+                                        onClick = { onEvent(PairingEvent.OnRefreshClicked) },
+                                        modifier = Modifier.padding(16.dp),
+                                        interactionSource = MutableInteractionSource()
                                     ) {
-                                        Text(
-                                            text = "Refresh",
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Light
-                                            ),
-                                            color = Color.White,
-                                        )
-                                        Icon(imageVector = Icons.Outlined.Refresh, contentDescription = "", tint = Color.White)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(id = R.string.refresh_btn),
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Light
+                                                ),
+                                                color = Color.White,
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Outlined.Refresh,
+                                                contentDescription = "",
+                                                tint = Color.White
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -631,7 +356,9 @@ fun BluetoothPairingScreen(
                                                             )
                                                         )
                                                     },
-                                                text = device.name.ifEmpty { "Unidentified" },
+                                                text = device.name.ifEmpty {
+                                                    stringResource(id = R.string.unidentified)
+                                                },
                                                 style = MaterialTheme.typography.bodyLarge
                                             )
 
@@ -657,7 +384,10 @@ fun BluetoothPairingScreen(
                                                         tint = Color.White,
                                                         modifier = Modifier.size(20.dp)
                                                     )
-                                                    Text(text = "Pair", color = Color.White)
+                                                    Text(
+                                                        text = stringResource(id = R.string.pair_btn),
+                                                        color = Color.White
+                                                    )
                                                 }
                                             }
                                         }
@@ -669,12 +399,6 @@ fun BluetoothPairingScreen(
                                 })
                             }
                         }
-
-                        // Scan devices button
-                        // List of scanned devices
-
-                        // Paired Devices title
-                        // List of paired devices
                     }
                 }
             }
@@ -683,7 +407,6 @@ fun BluetoothPairingScreen(
 
     BackHandler(onBack = { onEvent(PairingEvent.OnBackClicked) })
 }
-
 
 @Preview(
     name = "Light Mode",

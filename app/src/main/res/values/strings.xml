@@ -1,3 +1,33 @@
 <resources>
     <string name="app_name">Peer2Peer</string>
+
+    // Home Screen
+    <string name="wifi_off_on_switch">Wifi (%s)</string>
+    <string name="bt_off_on_switch">Bluetooth (%s)</string>
+    <string name="off">OFF</string>
+    <string name="on">ON</string>
+    <string name="received_packets">Received packets</string>
+    <string name="sent_packets">Sent packets</string>
+    <string name="received_at">Received at: %s</string>
+    <string name="sent_by_sender_at">Sent by sender at: %s</string>
+    <string name="sent_at">Sent at: %s</string>
+    <string name="time_taken">Time taken: %s</string>
+    <string name="distance_from_peer">Distance from peer:</string>
+    <string name="file_size">File size:</string>
+
+    <string name="send_packet_btn">Send Packet</string>
+    <string name="manage_connections_btn">Manage Connections</string>
+    <string name="connected_to">Connected to: %s</string>
+    <string name="no_active_connections_found">No active connections found</string>
+
+    // BTPairingScreen
+    <string name="paired_devices_title">Paired Devices</string>
+    <string name="discoverable_switch">Discoverable</string>
+    <string name="unidentified">Unidentified</string>
+    <string name="devices_nearby_title">Devices Nearby</string>
+    <string name="refresh_btn">Refresh</string>
+    <string name="connect_btn">Connect</string>
+    <string name="remove_btn">Remove</string>
+    <string name="rename_btn">Rename</string>
+    <string name="pair_btn">Pair</string>
 </resources>

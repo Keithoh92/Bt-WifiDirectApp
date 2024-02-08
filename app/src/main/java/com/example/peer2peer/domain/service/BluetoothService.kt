@@ -1,6 +1,5 @@
 package com.example.peer2peer.domain.service
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
@@ -11,9 +10,7 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.example.peer2peer.common.log.PLog
@@ -61,18 +58,14 @@ class BluetoothService(
         fun getService(): BluetoothService = this@BluetoothService
     }
 
-    override fun onBind(intent: Intent?): IBinder {
-        return binder
-    }
+    override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
         super.onDestroy()
         closeConnection()
     }
 
-    override fun onCreate() {
-
-    }
+    override fun onCreate() {}
 
     private val bluetoothManager by lazy {
         context.getSystemService(BluetoothManager::class.java)
@@ -105,8 +98,6 @@ class BluetoothService(
     private val _messageFlow = MutableSharedFlow<BluetoothMessageReceived>()
     private val _deviceFlow = MutableSharedFlow<BluetoothDeviceDomain>()
 
-//    private val serviceFlow: FLow<Ble>
-
     private val foundDeviceReceiver = FoundDeviceReceiver { device ->
         _scannedDevices.update { devices ->
             Log.d("foundDeviceReceiver", "foundDeviceReceiver device = $device?")
@@ -118,14 +109,6 @@ class BluetoothService(
     @SuppressLint("MissingPermission")
     private val bluetoothStateReceiver = BluetoothStateReceiver { isConnected, bluetoothDevice ->
         updateConnectionInDB(isConnected, bluetoothDevice)
-
-//        CoroutineScope(Dispatchers.IO).launch {
-//            if (isConnected) {
-//                _device.emit(bluetoothDevice.toBluetoothDeviceDomain(true))
-//            } else {
-//                _device.emit(BluetoothDeviceDomain())
-//            }
-//        }
 
         if (bluetoothAdapter?.bondedDevices?.contains(bluetoothDevice) == true) {
             updatePairedDevices(bluetoothDevice)
@@ -143,10 +126,10 @@ class BluetoothService(
                 PLog.d("Devices in DB before updating = $it")
             }
             val device = bluetoothDevice.toConnectedDevice()
+
             if (isConnected) {
-                Log.d("TINTIN", "updateConnectionInDB device is connected = $bluetoothDevice")
+                PLog.d("Device connected = $bluetoothDevice")
                 _device.update { bluetoothDevice.toBluetoothDeviceDomain(true) }
-//                _device.emit(bluetoothDevice.toBluetoothDeviceDomain(true))
                 PLog.d("Inserting device to DB")
                 connectedDeviceRepository.insert(device)
             } else {
@@ -176,7 +159,7 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     override fun startBluetoothServer() {
-        Log.d("startBluetoothServer", "startingBTServer")
+        PLog.d("startingBTServer")
         job = Job()
         job?.let {
             CoroutineScope(Dispatchers.IO + it).launch {
@@ -197,9 +180,8 @@ class BluetoothService(
                             null
                         }
 
-                        Log.d("startBluetoothServer", "is CurrenctClientSocket null = ${currentClientSocket == null}")
-
-                        Log.d("startBluetoothServer", "accepted connection")
+                        PLog.d("is CurrentClientSocket null = ${currentClientSocket == null}")
+                        PLog.d("accepted connection")
 
                         currentClientSocket?.let { clientSocket -> handleConnectedClient(clientSocket) }
                     }
@@ -223,90 +205,46 @@ class BluetoothService(
                         ?.createRfcommSocketToServiceRecord(UUID.fromString(SERVICE_UUID))
 
                     currentClientSocket?.connect()
-                    Log.d("connectToDevice", "connectToDevice currentClientSocket connect called")
-
-                    Log.d("connectToDevice", "connectToDevice currentClientSocket is null? = ${currentClientSocket == null}")
+                    PLog.d("currentClientSocket.connect()")
+                    PLog.d("currentClientSocket is null? = ${currentClientSocket == null}")
 
                     currentClientSocket?.let { clientSocket ->
                         handleConnectedClient(clientSocket, device)
                     }
                 } catch (e: IOException) {
-                    Log.d("TINTIN", "Connection was interrupted")
+                    PLog.d("Connection was interrupted")
                     e.printStackTrace()
                 }
             }
         }
     }
 
-    // Method to disconnect from the Bluetooth device
     override fun disconnectFromBT() {
         dataTransferService?.closeConnection()
     }
 
-//    @SuppressLint("MissingPermission")
-//    fun test() {
-//        val testing = bluetoothAdapter?.getProfileConnectionState(BluetoothDevice.ACTION_ACL_CONNECTED.toInt())
-//    }
-
     @SuppressLint("MissingPermission")
     override fun startDiscovery() {
-        Log.d("startDiscovery", "startDiscovery")
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-            Log.d("startDiscovery", "Android 12 or higher")
-            if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
-                return
-            }
-        } else {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_ADMIN) ||
-                !hasPermission(Manifest.permission.BLUETOOTH) ||
-                !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
-                !hasPermission(Manifest.permission.BLUETOOTH_CONNECT) ||
-                !hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ||
-                !hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                return
-            }
-        }
-        Log.d("startDiscovery", "startDiscovery registering foundDeviceReceiver")
+        PLog.d("Registering foundDeviceReceiver")
         context.registerReceiver(
             foundDeviceReceiver,
             IntentFilter(BluetoothDevice.ACTION_FOUND)
         )
 
         updatePairedDevices()
-
         bluetoothAdapter?.startDiscovery()
     }
 
     @SuppressLint("MissingPermission")
     override fun stopDiscovery() {
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-            Log.d("stopDiscovery", "stopDiscovery Android 12 or higher")
-            if (!hasPermission(Manifest.permission.BLUETOOTH_SCAN)) {
-                return
-            }
-        } else {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_ADMIN) ||
-                !hasPermission(Manifest.permission.BLUETOOTH) ||
-                !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
-                !hasPermission(Manifest.permission.BLUETOOTH_CONNECT) ||
-                !hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ||
-                !hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                return
-            }
-        }
-
         bluetoothAdapter?.cancelDiscovery()
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
     override suspend fun trySendMessage(message: String): BluetoothMessageSend? {
-        if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-            return null
-        }
-
-        Log.d("TINTIN", "trying to send message")
+        PLog.d("trying to send message")
         if (dataTransferService == null) {
-            Log.d("TINTIN", "dataTransferService == null")
+            PLog.d("dataTransferService == null")
             return null
         }
 
@@ -318,12 +256,11 @@ class BluetoothService(
         )
 
         dataTransferService?.sendMessage(bluetoothMessageSend.toByteArray())
-
         return bluetoothMessageSend
     }
 
     override fun closeConnection() {
-        Log.d("closeConnection()", "Closing connection")
+        PLog.d("Closing connection")
         job?.cancel()
         try {
             currentClientSocket?.close()
@@ -333,7 +270,7 @@ class BluetoothService(
             dataTransferService?.closeConnection()
             stopSelf()
         } catch (e: IOException) {
-            Log.d("AndroidBluetoothController 317", "Failed to close connection")
+            PLog.d("Failed to close connection")
             e.printStackTrace()
         }
     }
@@ -345,36 +282,18 @@ class BluetoothService(
     override fun release() {
         context.unregisterReceiver(foundDeviceReceiver)
         context.unregisterReceiver(bluetoothStateReceiver)
-        Log.d("AndroidBluetoothController 270", "Closing connection")
+        PLog.d("Closing connection")
         closeConnection()
     }
 
     @SuppressLint("MissingPermission")
     private fun updatePairedDevices(bluetoothDevice: BluetoothDevice? = null) {
-//        if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-//            return
-//        }
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
-            Log.d("updatePAiredDevices", "Android 12 or higher")
-            if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
-                return
-            }
-        } else {
-            if (!hasPermission(Manifest.permission.BLUETOOTH_ADMIN) ||
-                !hasPermission(Manifest.permission.BLUETOOTH) ||
-                !hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
-                !hasPermission(Manifest.permission.BLUETOOTH_CONNECT) ||
-                !hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) ||
-                !hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                return
-            }
-        }
-        Log.d("TINTIN", "Do we make it here?")
+        PLog.d("Do we make it here?")
 
         bluetoothAdapter
             ?.bondedDevices
             ?.map {
-                Log.d("updatePairedDevices", "bonded devices - current = ${it.name ?: "unidentified"}")
+                PLog.d("bonded devices - current = ${it.name ?: "unidentified"}")
                 val isAConnectedDevice =
                     bluetoothDevice != null && it.address == bluetoothDevice.address
                 it.toBluetoothDeviceDomain(isAConnectedDevice)
@@ -386,20 +305,18 @@ class BluetoothService(
     }
 
     private suspend fun handleConnectedClient(socket: BluetoothSocket, device: BluetoothDeviceDomain? = null) {
-        Log.d("handleConnectedClient", "handling connection before return flow")
+        PLog.d("handling connection before return flow")
         val inputStream = socket.inputStream
         val outputStream = socket.outputStream
 
         val service = BluetoothDataTransferService(inputStream, outputStream)
         dataTransferService = service
-        Log.d("TINTIN", "dataTransferService is $dataTransferService")
+        PLog.d("dataTransferService is $dataTransferService")
         PLog.d("Here the peer will receive the device = $device")
 
         startListeningForIncomingMessages()
 
-        device?.let {
-            _deviceFlow.emit(device)
-        }
+        device?.let { _deviceFlow.emit(device) }
     }
 
     override fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived> = _messageFlow.asSharedFlow()
@@ -407,15 +324,11 @@ class BluetoothService(
     override fun getDeviceConnected(): SharedFlow<BluetoothDeviceDomain> = _deviceFlow.asSharedFlow()
 
     override suspend fun startListeningForIncomingMessages() {
-        Log.d("TINTIN", "startListeningForIncomingMessages")
+        PLog.d("startListeningForIncomingMessages")
         dataTransferService?.getMessageFlow()?.onEach {
-            Log.d("TINTIN", "did we receive message here? = $it")
+            PLog.d("Message received? = $it")
             _messageFlow.emit(it)
         }?.launchIn(CoroutineScope(Dispatchers.IO))
-    }
-
-    private fun hasPermission(permission: String): Boolean {
-        return context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     }
 
     companion object {

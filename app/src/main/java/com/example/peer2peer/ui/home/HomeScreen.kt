@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -23,17 +22,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.peer2peer.R
 import com.example.peer2peer.domain.BluetoothDeviceDomain
 import com.example.peer2peer.domain.model.BluetoothDevice
 import com.example.peer2peer.domain.model.BluetoothMessageReceived
 import com.example.peer2peer.ui.common.CardTextField
 import com.example.peer2peer.ui.home.event.HomeScreenEvent
+import com.example.peer2peer.ui.home.view.HomeScreenLandscape
+import com.example.peer2peer.ui.home.view.HomeScreenOutlinedButton
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import com.example.peer2peer.ui.theme.P2PTheme3
 import com.example.peer2peer.ui.theme.Typography
+import com.example.peer2peer.ui.theme.spacing16
+import com.example.peer2peer.ui.theme.spacing60
+import com.example.peer2peer.ui.theme.spacing8
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.joda.time.DateTime
@@ -53,155 +59,18 @@ fun HomeScreen(
         Surface(color = MaterialTheme.colorScheme.primary) {
 
             if (isLandscape) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 60.dp, start = 16.dp, end = 16.dp),
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val connectedDevice = if (uiState.connectedDevice?.isConnected == true) {
-                            uiState.connectedDevice?.name ?: "Unidentified"
-                        } else {
-                            "None"
-                        }
-                        Text(
-                            text = connectedDevice,
-                            color = Color.White,
-                            style = Typography.body1
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Switch(
-                            checked = false,
-                            onCheckedChange = {},
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.tertiary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                checkedBorderColor = MaterialTheme.colorScheme.tertiary,
-                                uncheckedBorderColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
-                                uncheckedThumbColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
-                                uncheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                        )
-                        Text(text = "Wifi (OFF)", color = Color.White)
-
-                        Switch(
-                            checked = uiState.btServerSwitchIsChecked,
-                            onCheckedChange = { onEvent(HomeScreenEvent.OnClickBTSwitch) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.tertiary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                checkedBorderColor = MaterialTheme.colorScheme.tertiary,
-                                uncheckedBorderColor = MaterialTheme.colorScheme.tertiary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
-                                uncheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                        )
-                        Text(text = "Bluetooth (ON)", color = Color.White)
-                    }
-
-                    HomeScreenOutlinedButton(
-                        modifier = Modifier.align(Alignment.End),
-                        title = "Manage Connections",
-                        onClick = { onEvent(HomeScreenEvent.OnNavigateToBTConnectionScreen) }
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(32.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Text(
-                                    text = "Received packets",
-                                    style = Typography.h6,
-                                    color = Color.White
-                                )
-
-//                                if (!uiState.isSender) {
-//
-//                                }
-                                CardTextField(text = "Received at: ${uiState.timeReceived ?: ""}")
-                                CardTextField(text = "Sent by sender at: ${uiState.timeSentBySender ?: ""}")
-                                CardTextField(text = "Time taken: ${uiState.timeTaken ?: ""}")
-                                CardTextField(text = "Distance from peer: ")
-                            }
-                        }
-
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Text(
-                                    text = "Statistics",
-                                    style = Typography.h6,
-                                    color = Color.White
-                                )
-                                CardTextField(text = "Average Time to arrival: ")
-                                CardTextField(text = "Average Time to receive: ")
-                                CardTextField(text = "Fastest time: ")
-                                CardTextField(text = "Furthest distance: ")
-                            }
-                        }
-                    }
-
-
-//                Row(
-//                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-//                    modifier = Modifier
-//                        .padding(8.dp)
-//                        .fillMaxWidth()
-//                ) {
-                    HomeScreenOutlinedButton(
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .fillMaxWidth(),
-                        title = "Send packet",
-                        onClick = { onEvent(HomeScreenEvent.OnSendMessage) }
-                    )
-
-//                    HomeScreenOutlinedButton(
-//                        modifier = Modifier.weight(1f),
-//                        title = "Connections",
-//                        onClick = {}
-//                    )
-//                }
-
-//                    Spacer(modifier = Modifier.weight(1f))
-
-                }
+                HomeScreenLandscape(bluetoothUIState = bluetoothUIState, onEvent = onEvent)
             } else {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 60.dp, start = 16.dp, end = 16.dp),
+                        .padding(top = spacing60, start = spacing16, end = spacing16),
                     horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(spacing16)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(spacing8)
                     ) {
                         Switch(
                             checked = false,
@@ -215,13 +84,15 @@ fun HomeScreen(
                                 uncheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             )
                         )
-                        Text(text = "Wifi (OFF)", color = Color.White)
+                        val wifiOffOnDescription = stringResource(
+                            id = if (uiState.wifiServerSwitchIsChecked) R.string.on else R.string.off
+                        )
+                        Text(
+                            text = stringResource(id = R.string.wifi_off_on_switch, wifiOffOnDescription),
+                            color = Color.White
+                        )
 
                         Spacer(modifier = Modifier.weight(1f))
-//                    androidx.compose.material.Switch(
-//                        checked = uiState.discoverableSwitchIsChecked,
-//                        onCheckedChange = { onEvent(PairingEvent.OnClickDiscoverable) }
-//                    )
                         Switch(
                             checked = uiState.btServerSwitchIsChecked,
                             onCheckedChange = { onEvent(HomeScreenEvent.OnClickBTSwitch) },
@@ -234,69 +105,70 @@ fun HomeScreen(
                                 uncheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             )
                         )
-                        Text(text = "Bluetooth (ON)", color = Color.White)
+                        val btOffOnDescription = stringResource(
+                            id = if (uiState.btServerSwitchIsChecked) R.string.on else R.string.off
+                        )
+                        Text(
+                            text = stringResource(id = R.string.bt_off_on_switch, btOffOnDescription),
+                            color = Color.White
+                        )
                     }
 
+                    val connectedTo = if (uiState.connectedDevice?.name != null) {
+                        stringResource(id = R.string.connected_to, uiState.connectedDevice?.name!!)
+                    } else {
+                        stringResource(id = R.string.no_active_connections_found)
+                    }
                     Text(
-                        text = "Connected to: ${uiState.connectedDevice?.name ?: "None"}",
+                        text = connectedTo,
                         color = Color.White,
                         style = Typography.body1
                     )
 
                     HomeScreenOutlinedButton(
                         modifier = Modifier.align(Alignment.End),
-                        title = "Manage Connections",
+                        title = stringResource(id = R.string.manage_connections_btn),
                         onClick = { onEvent(HomeScreenEvent.OnNavigateToBTConnectionScreen) }
                     )
 
                     Card(
-                        modifier = Modifier
-//                        .padding(vertical = 15.dp)
-                            .align(Alignment.Start),
+                        modifier = Modifier.align(Alignment.Start),
                         colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondary)
                     ) {
                         Column(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(spacing16)
                                 .fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(spacing16)
                         ) {
                             Text(
-                                text = "Received packets",
+                                text = stringResource(id = R.string.received_packets),
                                 style = Typography.h6,
                                 color = Color.White
                             )
 
-                            CardTextField(text = "Received at: ${uiState.timeReceived ?: ""}")
-                            CardTextField(text = "Sent by sender at: ${uiState.timeSentBySender ?: ""}")
-                            CardTextField(text = "Time taken: ${uiState.timeTaken ?: ""}")
-                            CardTextField(text = "Distance from peer: ")
-                            CardTextField(text = "File size: ${uiState.size}")
+                            CardTextField(
+                                text = stringResource(id = R.string.received_at, uiState.timeReceived)
+                            )
+                            CardTextField(
+                                text = stringResource(id = R.string.sent_by_sender_at, uiState.timeSentBySenderReceived)
+                            )
+                            CardTextField(
+                                text = stringResource(id = R.string.time_taken, uiState.timeTakenReceived ?: "")
+                            )
+                            CardTextField(
+                                text = stringResource(id = R.string.file_size, uiState.size)
+                            )
                         }
                     }
 
-//                Row(
-//                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-//                    modifier = Modifier
-//                        .padding(8.dp)
-//                        .fillMaxWidth()
-//                ) {
                     HomeScreenOutlinedButton(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .fillMaxWidth(),
-                        title = "Send packet",
+                        title = stringResource(id = R.string.send_packet_btn),
                         onClick = { onEvent(HomeScreenEvent.OnSendMessage) }
                     )
-
-//                    HomeScreenOutlinedButton(
-//                        modifier = Modifier.weight(1f),
-//                        title = "Connections",
-//                        onClick = {}
-//                    )
-//                }
-
-//                    Spacer(modifier = Modifier.height(50.dp))
 
                     Card(
                         modifier = Modifier
@@ -311,39 +183,19 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
-                                text = "Sent packets",
+                                text = stringResource(id = R.string.sent_packets),
                                 style = Typography.h6,
                                 color = Color.White
                             )
-                            CardTextField(text = "Received at: ${uiState.timeReceived ?: ""}")
-                            CardTextField(text = "Sent by sender at: ${uiState.timeSentBySender ?: ""}")
-                            CardTextField(text = "Time taken: ${uiState.timeTaken ?: ""}")
-                            CardTextField(text = "Distance from peer: ")
+                            stringResource(id = R.string.sent_at, uiState.timeSentAtSender)
+                            CardTextField(text = stringResource(id = R.string.sent_at, uiState.timeSentAtSender))
                         }
                     }
                 }
             }
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
     }
 }
-
-@Composable
-fun HomeScreenOutlinedButton(
-    modifier: Modifier,
-    title: String,
-    onClick: () -> Unit
-) {
-    OutlinedButton(
-        modifier = modifier,
-        onClick = onClick
-    ) {
-        Text(text = title, color = MaterialTheme.colorScheme.tertiary, style = Typography.body1)
-    }
-}
-
 
 @Preview(
     name = "Light Mode",

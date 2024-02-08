@@ -18,7 +18,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-@RequiresApi(Build.VERSION_CODES.O)
 class BluetoothDataTransferService(
     private val inputStream: InputStream,
     private val outputStream: OutputStream
@@ -28,7 +27,9 @@ class BluetoothDataTransferService(
     private val messageChannel = Channel<BluetoothMessageReceived>()
 
     init {
-        listenForIncomingMessages()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            listenForIncomingMessages()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
