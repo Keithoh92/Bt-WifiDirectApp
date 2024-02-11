@@ -31,6 +31,9 @@ fun HomeScreenMain(
                 HomeScreenEffect.Navigation.ConnectionsScreen -> {
                     goToConnectionScreen.invoke()
                 }
+                is HomeScreenEffect.Toast -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

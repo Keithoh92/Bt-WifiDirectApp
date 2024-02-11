@@ -204,5 +204,8 @@ class BluetoothViewModel @Inject constructor(
         stopScan()
     }
 
-    private fun stopScan() = bluetoothController.stopDiscovery()
+    private fun stopScan() {
+        _uiState.update { it.copy(isBTScanRefreshing = false) }
+        bluetoothController.stopDiscovery()
+    }
 }
