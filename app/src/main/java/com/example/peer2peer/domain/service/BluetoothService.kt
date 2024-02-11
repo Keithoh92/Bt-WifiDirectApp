@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import java.io.IOException
+import java.lang.reflect.Method
 import java.util.UUID
 
 class BluetoothService(
@@ -78,10 +79,6 @@ class BluetoothService(
         bluetoothManager?.adapter
     }
 
-    private val _isConnected = MutableStateFlow(false)
-    override val isConnected: StateFlow<Boolean>
-        get() = _isConnected.asStateFlow()
-
     private val _device = MutableStateFlow(BluetoothDeviceDomain())
     override val device: StateFlow<BluetoothDeviceDomain>
         get() = _device.asStateFlow()
@@ -103,13 +100,31 @@ class BluetoothService(
         get() = _toastMessage.asSharedFlow()
 
     private val _messageFlow = MutableSharedFlow<BluetoothMessageReceived>()
-    private val _deviceFlow = MutableSharedFlow<BluetoothDeviceDomain>()
 
     private val foundDeviceReceiver = FoundDeviceReceiver { device ->
         _scannedDevices.update { devices ->
             Log.d("foundDeviceReceiver", "foundDeviceReceiver device = $device?")
             val newDevice = device.toBluetoothDeviceDomain(false)
             if (newDevice in devices) devices else devices + newDevice
+        }
+    }
+
+    fun isConnected(device: BluetoothDevice): Boolean {
+        return try {
+            val m: Method = device.javaClass.getMethod("isConnected")
+            m.invoke(device) as Boolean
+        } catch (e: Exception) {
+            throw IllegalStateException(e)
+        }
+    }
+
+    private fun deleteConnectedDeviceIfExists(address: String) {
+        PLog.d("Checking if the device exists in DB")
+        CoroutineScope(Dispatchers.IO).launch {
+            if (connectedDeviceRepository.exists(address)) {
+                PLog.d("The device exists, deleting..")
+                connectedDeviceRepository.delete(address)
+            }
         }
     }
 
@@ -315,15 +330,18 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     private fun updatePairedDevices(bluetoothDevice: BluetoothDevice? = null) {
-        PLog.d("Do we make it here?")
-
         bluetoothAdapter
             ?.bondedDevices
-            ?.map {
-                PLog.d("bonded devices - current = ${it.name ?: "unidentified"}")
-                val isAConnectedDevice =
-                    bluetoothDevice != null && it.address == bluetoothDevice.address
-                it.toBluetoothDeviceDomain(isAConnectedDevice)
+            ?.map { btDevice ->
+                var isConnected = false
+                if (!isConnected(btDevice)) {
+                    btDevice.address?.let { disconnectedDeviceAddress ->
+                        PLog.d("Device is not currently connected to BT: ${bluetoothDevice?.name}")
+                        deleteConnectedDeviceIfExists(disconnectedDeviceAddress)
+                    }
+                } else isConnected = true
+                PLog.d("bonded devices - current = ${btDevice.name ?: "unidentified"}")
+                btDevice.toBluetoothDeviceDomain(isConnected)
             }
             ?.also { devices ->
                 devices.sortedBy { it.isConnected }
