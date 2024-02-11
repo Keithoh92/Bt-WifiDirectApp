@@ -22,14 +22,14 @@ fun P2PTheme3(
     content: @Composable () -> Unit
 ) {
     val darkColorScheme = darkColorScheme(
-        primary = colorResource(id = R.color.primary),
+        primary = MaterialTheme.colorScheme.primary,
         secondary = colorResource(id = R.color.secondary),
         tertiary = colorResource(id = R.color.tertiary),
         onPrimary = colorResource(id = R.color.primary).copy(alpha = 0.1f)
     )
 
     val lightColorScheme = lightColorScheme(
-        primary = colorResource(id = R.color.primary),
+        primary = MaterialTheme.colorScheme.primary,
         secondary = colorResource(id = R.color.secondary),
         tertiary = colorResource(id = R.color.tertiary),
         onPrimary = colorResource(id = R.color.primary).copy(alpha = 0.1f)
@@ -40,7 +40,7 @@ fun P2PTheme3(
         dynamicColor && isDarkTheme -> dynamicDarkColorScheme(LocalContext.current)
         dynamicColor && !isDarkTheme -> dynamicLightColorScheme(LocalContext.current)
         isDarkTheme -> darkColorScheme
-        else -> lightColorScheme
+        else -> darkColorScheme
     }
 
     MaterialTheme(
@@ -54,13 +54,13 @@ fun P2PTheme3(
 @Composable
 fun P2PTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val darkColorPalette = darkColors(
-        primary = colorResource(id = R.color.dark_purple_app),
+        primary = colorResource(id = R.color.primary),
         primaryVariant = colorResource(id = R.color.dark_grey_app),
         secondary = colorResource(id = R.color.light_grey_app)
     )
 
     val lightColorPalette = lightColors(
-        primary = colorResource(id = R.color.dark_purple_app),
+        primary = colorResource(id = R.color.primary),
         primaryVariant = colorResource(id = R.color.dark_grey_app),
         secondary = colorResource(id = R.color.light_grey_app)
 
