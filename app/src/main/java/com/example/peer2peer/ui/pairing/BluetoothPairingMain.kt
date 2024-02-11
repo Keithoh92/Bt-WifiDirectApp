@@ -27,6 +27,7 @@ fun BluetoothPairingMain(
     )
     
     LaunchedEffect(key1 = Unit) {
+        viewModel.debounceClickEvent = DebounceOnClickEvent(this)
         viewModel.discoverable = discoverable
         viewModel.startObservingBluetoothController()
         viewModel.effect.collectLatest { effect ->

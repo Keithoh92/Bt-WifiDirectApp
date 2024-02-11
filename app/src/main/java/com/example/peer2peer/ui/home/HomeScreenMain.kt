@@ -21,6 +21,7 @@ fun HomeScreenMain(
     goToConnectionScreen: () -> Unit
 ) {
     LaunchedEffect(key1 = Unit) {
+        viewModel.debounceClickEvent = DebounceOnClickEvent(this)
         viewModel.onStartService = onStartService
         viewModel.onStopService = onStopService
         viewModel.startObservingMessageFlow()

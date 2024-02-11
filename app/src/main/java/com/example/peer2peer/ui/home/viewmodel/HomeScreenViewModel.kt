@@ -7,8 +7,11 @@ import com.example.peer2peer.common.log.PLog
 import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
 import com.example.peer2peer.data.toBluetoothDeviceDomain
 import com.example.peer2peer.domain.BluetoothController
+import com.example.peer2peer.ui.common.DebounceOnClickEvent
+import com.example.peer2peer.ui.compose.DialogType
 import com.example.peer2peer.ui.home.effect.HomeScreenEffect
 import com.example.peer2peer.ui.home.event.HomeScreenEvent
+import com.example.peer2peer.ui.home.state.HomeScreenUIState
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -31,17 +34,13 @@ class HomeScreenViewModel @Inject constructor(
     private val connectedDeviceRepository: ConnectedDeviceRepository
 ): ViewModel() {
 
-    private val _uiState = MutableStateFlow(BluetoothUIState())
-    val uiState = combine(
-        bluetoothController.scannedDevices,
-        bluetoothController.pairedDevices,
-        _uiState
-    ) { scannedDevices, pairedDevices, uiState ->
-        uiState.copy(
-            scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value)
+    lateinit var debounceClickEvent: DebounceOnClickEvent
+
+    private val _uiState = MutableStateFlow(HomeScreenUIState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _bluetoothControllerUIState = MutableStateFlow(BluetoothUIState())
+    val bluetoothControllerUIState = _bluetoothControllerUIState.asStateFlow()
 
     private val _effect = Channel<HomeScreenEffect>(Channel.UNLIMITED)
     val effect: Flow<HomeScreenEffect> = _effect.receiveAsFlow()
@@ -51,9 +50,11 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onEvent(event: HomeScreenEvent) {
         when (event) {
-            is HomeScreenEvent.OnNavigateToBTConnectionScreen -> navigateTo()
-            is HomeScreenEvent.OnSendMessage -> sendMessage("Story")
-            is HomeScreenEvent.OnClickBTSwitch -> onClickBTSwitch()
+            is HomeScreenEvent.OnNavigateToBTConnectionScreen ->
+                debounceClickEvent.onClick { navigateTo() }
+            is HomeScreenEvent.OnSendMessage -> debounceClickEvent.onClick { sendMessage() }
+            is HomeScreenEvent.OnClickBTSwitch -> debounceClickEvent.onClick { onClickBTSwitch() }
+            is HomeScreenEvent.DismissDialogs -> _uiState.update { it.dismissDialog() }
         }
     }
 

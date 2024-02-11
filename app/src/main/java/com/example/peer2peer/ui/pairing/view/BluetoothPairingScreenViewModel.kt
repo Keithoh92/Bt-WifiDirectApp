@@ -8,8 +8,10 @@ import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
 import com.example.peer2peer.domain.BluetoothController
 import com.example.peer2peer.domain.BluetoothDeviceDomain
 import com.example.peer2peer.domain.model.BluetoothDevice
+import com.example.peer2peer.ui.common.DebounceOnClickEvent
 import com.example.peer2peer.ui.pairing.effect.PairingEffect
 import com.example.peer2peer.ui.pairing.event.PairingEvent
+import com.example.peer2peer.ui.pairing.state.BluetoothPairingScreenUIState
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +37,9 @@ class BluetoothViewModel @Inject constructor(
     private val connectedDeviceRepository: ConnectedDeviceRepository
 ): ViewModel() {
 
-    private val _uiState = MutableStateFlow(BluetoothUIState())
+    lateinit var debounceClickEvent: DebounceOnClickEvent
+
+    private val _uiState = MutableStateFlow(BluetoothPairingScreenUIState())
     val uiState = combine(
         bluetoothController.scannedDevices,
         bluetoothController.pairedDevices,
@@ -62,15 +66,34 @@ class BluetoothViewModel @Inject constructor(
 
     fun onEvent(event: PairingEvent) {
         when (event) {
-            is PairingEvent.OnRefreshClicked -> startScan()
-            is PairingEvent.OnClickNearbyDevice -> onClickNearbyDevice(event.device)
-            is PairingEvent.OnClickPairedDevice -> onClickPairedDevice(event.device)
+            is PairingEvent.OnScanClicked ->
+                debounceClickEvent.onClick { startScan() }
+            is PairingEvent.OnStopScanning -> debounceClickEvent.onClick { stopScan() }
+            is PairingEvent.OnClickNearbyDevice ->
+                debounceClickEvent.onClick { onClickNearbyDevice(event.device) }
+            is PairingEvent.OnClickPairedDevice ->
+                debounceClickEvent.onClick { onClickPairedDevice(event.device) }
             is PairingEvent.OnClickMoreVert -> onClickMoreVert(event.device)
-            is PairingEvent.OnClickDiscoverable -> onClickDiscoverable()
+            is PairingEvent.OnClickDiscoverable ->
+                debounceClickEvent.onClick { onClickDiscoverable() }
             is PairingEvent.OnClickDoneBottomSheet -> closeBottomSheet()
-            is PairingEvent.OnBackClicked -> onBackClicked()
-            is PairingEvent.OnSendClicked -> sendMessage("Yo")
+            is PairingEvent.OnBackClicked ->
+                debounceClickEvent.onClick { onBackClicked() }
+            is PairingEvent.OnSendClicked ->
+                debounceClickEvent.onClick { sendMessage("Yo") }
+            is PairingEvent.OnClickRenameDevice -> renameDevice(event.address)
+            is PairingEvent.OnClickRemoveDevice -> debounceClickEvent.onClick {
+                unpairDevice(event.address)
+            }
         }
+    }
+
+    private fun unpairDevice(address: String) = viewModelScope.launch {
+        bluetoothController.unpairDevice(address)
+    }
+
+    private fun renameDevice(address: String) {
+
     }
 
     fun startObservingBluetoothController() {
