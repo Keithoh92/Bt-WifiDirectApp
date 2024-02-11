@@ -19,6 +19,7 @@
     <string name="manage_connections_btn">Manage Connections</string>
     <string name="connected_to">Connected to: %s</string>
     <string name="no_active_connections_found">No active connections found</string>
+    <string name="disconnecting_from_bt_service">Turning Bluetooth Off</string>
 
     // BTPairingScreen
     <string name="paired_devices_title">Paired Devices</string>
@@ -26,8 +27,23 @@
     <string name="unidentified">Unidentified</string>
     <string name="devices_nearby_title">Devices Nearby</string>
     <string name="refresh_btn">Refresh</string>
+    <string name="scan_btn">Scan</string>
     <string name="connect_btn">Connect</string>
     <string name="remove_btn">Remove</string>
     <string name="rename_btn">Rename</string>
     <string name="pair_btn">Pair</string>
+    <string name="failed_unpairing">Something went wrong trying to unpair device, please try again</string>
+
+    // Common
+    <string name="dialog_something_went_wrong">Something went wrong, please try again</string>
+    <string name="error_alert_title">Error</string>
+    <string name="please_wait">Please wait…</string>
+    <string name="disconnected_from_device">Disconnected from %s</string>
+    //buttons
+    <string name="ok_btn">OK</string>
+    <string name="cancel_btn">Cancel</string>
+    <string name="try_again_btn">Try again</string>
+    <string name="scanning">Scanning..</string>
+    <string name="stop">Stop</string>
+    <string name="pairing_screen_title">BT Pairing Screen</string>
 </resources>
