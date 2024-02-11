@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.example.peer2peer.common.log.PLog
 import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
 import com.example.peer2peer.domain.service.BluetoothService
 import com.example.peer2peer.ui.home.homeScreenRoute
@@ -149,7 +150,6 @@ class MainActivity : ComponentActivity() {
 
     private fun stopBluetoothService() {
         job = CoroutineScope(Dispatchers.Main).launch {
-            bluetoothService.closeConnection()
             stopService()
         }
     }
@@ -173,6 +173,7 @@ class MainActivity : ComponentActivity() {
 
     private fun deleteAllFromDB() {
         job = CoroutineScope(Dispatchers.Main).launch {
+            PLog.d("Deleting devices from DB")
             connectedDeviceRepository.deleteAll()
         }
     }

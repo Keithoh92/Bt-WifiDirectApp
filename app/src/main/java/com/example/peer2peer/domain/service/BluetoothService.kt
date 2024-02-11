@@ -98,6 +98,10 @@ class BluetoothService(
     override val errors: SharedFlow<String>
         get() = _errors.asSharedFlow()
 
+    private val _toastMessage = MutableSharedFlow<String>()
+    override val toastMessage: SharedFlow<String>
+        get() = _toastMessage.asSharedFlow()
+
     private val _messageFlow = MutableSharedFlow<BluetoothMessageReceived>()
     private val _deviceFlow = MutableSharedFlow<BluetoothDeviceDomain>()
 
@@ -263,7 +267,7 @@ class BluetoothService(
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    override suspend fun trySendMessage(message: String): BluetoothMessageSend? {
+    override suspend fun trySendMessage(): BluetoothMessageSend? {
         PLog.d("trying to send message")
         if (dataTransferService == null) {
             PLog.d("dataTransferService == null")
@@ -273,7 +277,7 @@ class BluetoothService(
         val timeSent = DateTime.now()
         val senderDeviceInfo = "${bluetoothAdapter?.name ?: "Unidentified"};${bluetoothAdapter?.address ?: "Unidentified address"};${timeSent}"
         val bluetoothMessageSend = BluetoothMessageSend(
-            senderDeviceAndMessage = "$senderDeviceInfo;$message",
+            senderDeviceAndMessage = senderDeviceInfo,
             timeSent = DateTime.now()
         )
 
@@ -298,7 +302,8 @@ class BluetoothService(
     }
 
     override fun stopServer() {
-        currentServerSocket?.close()
+        PLog.d("Stopping BT server")
+        closeConnection()
     }
 
     override fun release() {
@@ -337,8 +342,6 @@ class BluetoothService(
         PLog.d("Here the peer will receive the device = $device")
 
         startListeningForIncomingMessages()
-
-        device?.let { _deviceFlow.emit(device) }
     }
 
     override fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived> = _messageFlow.asSharedFlow()
