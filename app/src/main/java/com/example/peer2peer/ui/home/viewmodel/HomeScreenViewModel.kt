@@ -1,6 +1,7 @@
 package com.example.peer2peer.ui.home.viewmodel
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.peer2peer.common.log.PLog
@@ -18,12 +19,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -59,29 +58,44 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun startObservingBluetoothController() = viewModelScope.launch {
+        handleConnections()
+
+        connectedDeviceRepository.getAllConnectedDevices().forEach {
+            PLog.d(" connected Device = ${it.name}")
+        }
+
         bluetoothController.device.onEach { device ->
             PLog.d("bluetoothController.device -> $device")
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 connectedDevice = device
             )}
+        }.launchIn(viewModelScope)
 
+        bluetoothController.getIncomingMessageFlow().onEach { message ->
+            Log.d("TINTIN", "Received Message = $message")
+            _bluetoothControllerUIState.update { it.copy(
+                messagesReceived = it.messagesReceived + message,
+            ) }
+        }.launchIn(viewModelScope)
+
+        bluetoothController.getToastMessages().onEach { message ->
+            showToastMessage(message)
         }.launchIn(viewModelScope)
 
         bluetoothController.errors.onEach { error ->
-            _uiState.update { it.copy(errorMessage = error) }
+            showToastMessage(message = error)
         }.launchIn(viewModelScope)
     }
 
     private fun onClickBTSwitch() = viewModelScope.launch {
-        if (uiState.value.discoverableSwitchIsChecked) {
+        if (uiState.value.btServerSwitchIsChecked) {
             _uiState.update { it.copy(btServerSwitchIsChecked = false) }
-            bluetoothController.disconnectFromBT()
+            bluetoothController.stopServer()
+            delay(5000)
             onStopService?.invoke()
         } else {
-            onStartService?.invoke()
             _uiState.update { it.copy(btServerSwitchIsChecked = true) }
-            delay(30000)
-            bluetoothController.stopServer()
+            onStartService?.invoke()
         }
     }
 
@@ -89,31 +103,55 @@ class HomeScreenViewModel @Inject constructor(
         _effect.send(HomeScreenEffect.Navigation.ConnectionsScreen)
     }
 
-    fun sendMessage(message: String) = viewModelScope.launch {
-        val bluetoothMessage = bluetoothController.trySendMessage(message)
-        Log.d("HomeScreenVM 55", "bluetoothMessage: $bluetoothMessage")
+    private fun showToastMessage(message: String) = viewModelScope.launch {
+        _effect.send(HomeScreenEffect.Toast(message))
+    }
+
+    private fun sendMessage() = viewModelScope.launch {
+        val bluetoothMessage = bluetoothController.trySendMessage()
+        PLog.d("bluetoothMessage: $bluetoothMessage")
         if (bluetoothMessage != null) {
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 messagesSent = it.messagesSent + bluetoothMessage
             ) }
         }
     }
 
-    fun startObservingMessageFlow() = viewModelScope.launch {
-        handleConnections()
-        bluetoothController.getIncomingMessageFlow().collect { message ->
-            Log.d("TINTIN", "Received Message = $message")
-            _uiState.update { it.copy(
-                messagesReceived = it.messagesReceived + message,
-            ) }
-        }
-    }
+//    fun startObservingMessageFlow() = viewModelScope.launch {
+//        handleConnections()
+//        bluetoothController.getIncomingMessageFlow().collect { message ->
+//            Log.d("TINTIN", "Received Message = $message")
+//            _bluetoothControllerUIState.update { it.copy(
+//                messagesReceived = it.messagesReceived + message,
+//            ) }
+//        }
+//    }
 
     private fun handleConnections() = viewModelScope.launch {
         val devices = connectedDeviceRepository.getAllConnectedDevices()
         if (devices.isNotEmpty()) {
-            _uiState.update { it.copy(connectedDevice = devices.first().toBluetoothDeviceDomain()) }
+            _bluetoothControllerUIState.update { it.copy(connectedDevice = devices.first().toBluetoothDeviceDomain()) }
         }
+    }
+
+    private fun showConfirmDialog(
+        @StringRes titleResId: Int,
+        @StringRes messageResId: Int,
+        @StringRes confirmButtonLabelResId: Int,
+        @StringRes dismissButtonLabelResId: Int?,
+        confirmEvent: () -> Unit,
+        dismissEvent: () -> Unit
+    ) = _uiState.update {
+        it.copy(
+            showDialogType = DialogType.Confirm(
+                titleResId = titleResId,
+                messageResId = messageResId,
+                confirmButtonLabelResId = confirmButtonLabelResId,
+                dismissButtonLabelResId = dismissButtonLabelResId,
+                confirmEvent = confirmEvent,
+                dismissEvent = dismissEvent
+            )
+        )
     }
 
 //    fun startObservingDevice() = viewModelScope.launch {

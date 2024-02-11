@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class BluetoothViewModel @Inject constructor(
+class BluetoothPairingScreenViewModel @Inject constructor(
     private val bluetoothController: BluetoothController,
     private val connectedDeviceRepository: ConnectedDeviceRepository
 ): ViewModel() {
@@ -47,10 +47,12 @@ class BluetoothViewModel @Inject constructor(
     ) { scannedDevices, pairedDevices, uiState ->
         uiState.copy(
             scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices,
-            messagesReceived = if (uiState.isConnected) uiState.messagesReceived else emptyList()
+            pairedDevices = pairedDevices
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value)
+
+    private val _bluetoothControllerUIState = MutableStateFlow(BluetoothUIState())
+    val bluetoothControllerUIState = _bluetoothControllerUIState.asStateFlow()
 
     private val _bottomSheetUIState = MutableStateFlow(PairingBottomSheetUIState())
     val bottomSheetUIState = _bottomSheetUIState.asStateFlow()
@@ -97,13 +99,9 @@ class BluetoothViewModel @Inject constructor(
     }
 
     fun startObservingBluetoothController() {
-        bluetoothController.isConnected.onEach { isConnected ->
-            _bottomSheetUIState.update { it.copy(isConnected = isConnected) }
-        }.launchIn(viewModelScope)
-
         bluetoothController.device.onEach { device ->
             PLog.d("bluetoothController.device -> $device")
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 connectedDevice = device
             )}
 
@@ -121,7 +119,8 @@ class BluetoothViewModel @Inject constructor(
         }.launchIn(viewModelScope)
 
         bluetoothController.errors.onEach { error ->
-            _uiState.update { it.copy(errorMessage = error) }
+            _bluetoothControllerUIState.update { it.copy(errorMessage = error) }
+            showToastMessage(message = error)
         }.launchIn(viewModelScope)
     }
 
@@ -140,11 +139,11 @@ class BluetoothViewModel @Inject constructor(
     private fun onClickDiscoverable() = viewModelScope.launch {
         if (uiState.value.discoverableSwitchIsChecked) {
             _uiState.update { it.copy(discoverableSwitchIsChecked = false) }
-//            bluetoothController.stopServer()
+            bluetoothController.stopServer()
         } else {
             _uiState.update { it.copy(discoverableSwitchIsChecked = true) }
             discoverable?.invoke()
-//            bluetoothController.startBluetoothServer()
+            bluetoothController.startBluetoothServer()
             delay(30000)
         }
     }
@@ -187,9 +186,9 @@ class BluetoothViewModel @Inject constructor(
 
     private fun sendMessage(message: String) = viewModelScope.launch {
         PLog.d("Sending message")
-        val bluetoothMessage = bluetoothController.trySendMessage(message)
+        val bluetoothMessage = bluetoothController.trySendMessage()
         if (bluetoothMessage != null) {
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 messagesSent = it.messagesSent + bluetoothMessage
             ) }
         }
