@@ -13,6 +13,8 @@ import android.content.IntentFilter
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import com.example.peer2peer.R
+import com.example.peer2peer.common.StringResHelper
 import com.example.peer2peer.common.log.PLog
 import com.example.peer2peer.data.BluetoothStateReceiver
 import com.example.peer2peer.data.FoundDeviceReceiver
@@ -44,7 +46,8 @@ import java.util.UUID
 
 class BluetoothService(
     private val context: Context,
-    private val connectedDeviceRepository: ConnectedDeviceRepository
+    private val connectedDeviceRepository: ConnectedDeviceRepository,
+    private val stringResHelper: StringResHelper,
 ) : Service(), BluetoothController {
 
     private val binder = BluetoothBinder()
@@ -132,10 +135,12 @@ class BluetoothService(
                 _device.update { bluetoothDevice.toBluetoothDeviceDomain(true) }
                 PLog.d("Inserting device to DB")
                 connectedDeviceRepository.insert(device)
+                showToast(stringResHelper.getString(R.string.connected_to, device.name))
             } else {
                 PLog.d("Deleting device from DB")
                 _device.update { BluetoothDeviceDomain("", "", false) }
                 connectedDeviceRepository.delete(device.macAddress)
+                showToast(stringResHelper.getString(R.string.disconnected_from_device, device.name))
             }
 
             val devices = connectedDeviceRepository.getAllConnectedDevices()
@@ -321,7 +326,7 @@ class BluetoothService(
 
     override fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived> = _messageFlow.asSharedFlow()
 
-    override fun getDeviceConnected(): SharedFlow<BluetoothDeviceDomain> = _deviceFlow.asSharedFlow()
+    override fun getToastMessages(): SharedFlow<String> = _toastMessage.asSharedFlow()
 
     override suspend fun startListeningForIncomingMessages() {
         PLog.d("startListeningForIncomingMessages")

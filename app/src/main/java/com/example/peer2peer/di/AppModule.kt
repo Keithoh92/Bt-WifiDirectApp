@@ -3,6 +3,7 @@ package com.example.peer2peer.di
 import android.content.Context
 import androidx.room.Room
 import com.example.peer2peer.Peer2PeerApplication
+import com.example.peer2peer.common.StringResHelper
 import com.example.peer2peer.data.database.Peer2PeerDatabase
 import com.example.peer2peer.data.database.dao.ConnectedDeviceDao
 import com.example.peer2peer.data.database.dao.PairedDeviceDao
@@ -56,11 +57,15 @@ object AppModule {
     }
 
     @Provides
+    fun provideStringResHelper(@ApplicationContext context: Context,) = StringResHelper(context)
+
+    @Provides
     @Singleton
     fun provideBluetoothController(
         @ApplicationContext context: Context,
-        connectedDeviceRepository: ConnectedDeviceRepository
+        connectedDeviceRepository: ConnectedDeviceRepository,
+        stringResHelper: StringResHelper
     ): BluetoothController {
-        return BluetoothService(context, connectedDeviceRepository)
+        return BluetoothService(context, connectedDeviceRepository, stringResHelper)
     }
 }

@@ -13,6 +13,7 @@ interface BluetoothController {
     val scannedDevices: StateFlow<List<BluetoothDevice>>
     val pairedDevices: StateFlow<List<BluetoothDevice>>
     val errors: SharedFlow<String>
+    val toastMessage: SharedFlow<String>
 
     fun startDiscovery()
 
@@ -36,5 +37,5 @@ interface BluetoothController {
 
     fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived>
 
-    fun getDeviceConnected(): SharedFlow<BluetoothDeviceDomain>
+    fun getToastMessages(): SharedFlow<String>
 }

@@ -93,6 +93,10 @@ class BluetoothViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
+        bluetoothController.getToastMessages().onEach { message ->
+            showToastMessage(message)
+        }.launchIn(viewModelScope)
+
         bluetoothController.errors.onEach { error ->
             _uiState.update { it.copy(errorMessage = error) }
         }.launchIn(viewModelScope)
