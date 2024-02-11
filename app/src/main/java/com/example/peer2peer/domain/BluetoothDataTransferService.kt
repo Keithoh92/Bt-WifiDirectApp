@@ -108,11 +108,9 @@ class BluetoothDataTransferService(
 
         val formatter = DateTimeFormat.forPattern("yy-MM-dd'T'HH:mm:ss.SSS'Z'")
         val receivedDate = formatter.parseDateTime(parts[2])
-        val message = parts[3] // Extract message from senderDeviceInfo
 
         return BluetoothMessageReceived(
             senderDevice = senderDevice,
-            message = message,
             isFromLocalUser = false,
             timeSent = receivedDate,
             timeReceived = timeReceived,
