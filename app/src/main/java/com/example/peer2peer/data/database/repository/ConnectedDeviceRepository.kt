@@ -11,6 +11,11 @@ class ConnectedDeviceRepository(private val connectedDeviceDao: ConnectedDeviceD
         return@withContext connectedDeviceDao.fetchAllConnectedDevices() ?: emptyList()
     }
 
+    suspend fun exists(address: String): Boolean = withContext(Dispatchers.IO) {
+        val device = connectedDeviceDao.fetchAllConnectedDevices()?.find { it.macAddress == address }
+        return@withContext device != null
+    }
+
     suspend fun insert(connectedDevice: ConnectedDevice): Long = withContext(Dispatchers.IO) {
         return@withContext connectedDeviceDao.insert(connectedDevice = connectedDevice)
     }

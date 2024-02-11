@@ -6,11 +6,19 @@ object PLog {
 
     @JvmStatic
     fun d(message: String) {
-
         val messages = message.splitBySize()
 
         messages.forEach {
             Log.d(stackElement.tag(), stackElement.msg(it))
+        }
+    }
+
+    @JvmStatic
+    fun e(message: String, tr: Throwable) {
+        val messages = message.splitBySize()
+
+        messages.forEach {
+            Log.e(stackElement.tag(), stackElement.msg(it), tr)
         }
     }
 

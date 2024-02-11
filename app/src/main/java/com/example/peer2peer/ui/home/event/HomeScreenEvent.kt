@@ -4,4 +4,5 @@ sealed class HomeScreenEvent {
     object OnNavigateToBTConnectionScreen : HomeScreenEvent()
     object OnSendMessage : HomeScreenEvent()
     object OnClickBTSwitch : HomeScreenEvent()
+    object DismissDialogs : HomeScreenEvent()
 }

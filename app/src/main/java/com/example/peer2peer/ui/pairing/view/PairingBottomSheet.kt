@@ -32,12 +32,12 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.example.peer2peer.domain.model.BluetoothDevice
-import com.example.peer2peer.ui.common.ProgressIndicator
+import com.example.peer2peer.ui.compose.ProgressIndicator
 import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
 
 @Composable
 fun PairingBottomSheet(uiState: PairingBottomSheetUIState, onClickDone: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.primary) {
+    Surface(color = Color.Black) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -74,7 +74,7 @@ fun PairingBottomSheet(uiState: PairingBottomSheetUIState, onClickDone: () -> Un
                 )
             }
 
-            Divider()
+            Divider(color = Color.White)
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

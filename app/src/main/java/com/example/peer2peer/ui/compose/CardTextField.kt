@@ -1,4 +1,4 @@
-package com.example.peer2peer.ui.common
+package com.example.peer2peer.ui.compose
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.padding

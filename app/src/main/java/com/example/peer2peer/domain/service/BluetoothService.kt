@@ -13,6 +13,8 @@ import android.content.IntentFilter
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import com.example.peer2peer.R
+import com.example.peer2peer.common.StringResHelper
 import com.example.peer2peer.common.log.PLog
 import com.example.peer2peer.data.BluetoothStateReceiver
 import com.example.peer2peer.data.FoundDeviceReceiver
@@ -40,11 +42,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import java.io.IOException
+import java.lang.reflect.Method
 import java.util.UUID
 
 class BluetoothService(
     private val context: Context,
-    private val connectedDeviceRepository: ConnectedDeviceRepository
+    private val connectedDeviceRepository: ConnectedDeviceRepository,
+    private val stringResHelper: StringResHelper,
 ) : Service(), BluetoothController {
 
     private val binder = BluetoothBinder()
@@ -75,10 +79,6 @@ class BluetoothService(
         bluetoothManager?.adapter
     }
 
-    private val _isConnected = MutableStateFlow(false)
-    override val isConnected: StateFlow<Boolean>
-        get() = _isConnected.asStateFlow()
-
     private val _device = MutableStateFlow(BluetoothDeviceDomain())
     override val device: StateFlow<BluetoothDeviceDomain>
         get() = _device.asStateFlow()
@@ -95,14 +95,36 @@ class BluetoothService(
     override val errors: SharedFlow<String>
         get() = _errors.asSharedFlow()
 
+    private val _toastMessage = MutableSharedFlow<String>()
+    override val toastMessage: SharedFlow<String>
+        get() = _toastMessage.asSharedFlow()
+
     private val _messageFlow = MutableSharedFlow<BluetoothMessageReceived>()
-    private val _deviceFlow = MutableSharedFlow<BluetoothDeviceDomain>()
 
     private val foundDeviceReceiver = FoundDeviceReceiver { device ->
         _scannedDevices.update { devices ->
             Log.d("foundDeviceReceiver", "foundDeviceReceiver device = $device?")
             val newDevice = device.toBluetoothDeviceDomain(false)
             if (newDevice in devices) devices else devices + newDevice
+        }
+    }
+
+    fun isConnected(device: BluetoothDevice): Boolean {
+        return try {
+            val m: Method = device.javaClass.getMethod("isConnected")
+            m.invoke(device) as Boolean
+        } catch (e: Exception) {
+            throw IllegalStateException(e)
+        }
+    }
+
+    private fun deleteConnectedDeviceIfExists(address: String) {
+        PLog.d("Checking if the device exists in DB")
+        CoroutineScope(Dispatchers.IO).launch {
+            if (connectedDeviceRepository.exists(address)) {
+                PLog.d("The device exists, deleting..")
+                connectedDeviceRepository.delete(address)
+            }
         }
     }
 
@@ -132,10 +154,12 @@ class BluetoothService(
                 _device.update { bluetoothDevice.toBluetoothDeviceDomain(true) }
                 PLog.d("Inserting device to DB")
                 connectedDeviceRepository.insert(device)
+                showToast(stringResHelper.getString(R.string.connected_to, device.name))
             } else {
                 PLog.d("Deleting device from DB")
                 _device.update { BluetoothDeviceDomain("", "", false) }
                 connectedDeviceRepository.delete(device.macAddress)
+                showToast(stringResHelper.getString(R.string.disconnected_from_device, device.name))
             }
 
             val devices = connectedDeviceRepository.getAllConnectedDevices()
@@ -224,6 +248,23 @@ class BluetoothService(
     }
 
     @SuppressLint("MissingPermission")
+    override suspend fun unpairDevice(address: String) {
+        val device = bluetoothAdapter?.bondedDevices?.find { it.address == address }
+        try {
+            val method = device?.javaClass?.getMethod("removeBond")
+            method?.invoke(device)
+            updatePairedDevices()
+        } catch (e: Exception) {
+            PLog.e("Something wrong trying to unpair device: ${device?.name}", e)
+            showToast(stringResHelper.getString(R.string.failed_unpairing))
+        }
+    }
+
+    private suspend fun showToast(message: String) {
+        _toastMessage.emit(message)
+    }
+
+    @SuppressLint("MissingPermission")
     override fun startDiscovery() {
         PLog.d("Registering foundDeviceReceiver")
         context.registerReceiver(
@@ -241,7 +282,7 @@ class BluetoothService(
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    override suspend fun trySendMessage(message: String): BluetoothMessageSend? {
+    override suspend fun trySendMessage(): BluetoothMessageSend? {
         PLog.d("trying to send message")
         if (dataTransferService == null) {
             PLog.d("dataTransferService == null")
@@ -251,7 +292,7 @@ class BluetoothService(
         val timeSent = DateTime.now()
         val senderDeviceInfo = "${bluetoothAdapter?.name ?: "Unidentified"};${bluetoothAdapter?.address ?: "Unidentified address"};${timeSent}"
         val bluetoothMessageSend = BluetoothMessageSend(
-            senderDeviceAndMessage = "$senderDeviceInfo;$message",
+            senderDeviceAndMessage = senderDeviceInfo,
             timeSent = DateTime.now()
         )
 
@@ -276,7 +317,8 @@ class BluetoothService(
     }
 
     override fun stopServer() {
-        currentServerSocket?.close()
+        PLog.d("Stopping BT server")
+        closeConnection()
     }
 
     override fun release() {
@@ -288,15 +330,18 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     private fun updatePairedDevices(bluetoothDevice: BluetoothDevice? = null) {
-        PLog.d("Do we make it here?")
-
         bluetoothAdapter
             ?.bondedDevices
-            ?.map {
-                PLog.d("bonded devices - current = ${it.name ?: "unidentified"}")
-                val isAConnectedDevice =
-                    bluetoothDevice != null && it.address == bluetoothDevice.address
-                it.toBluetoothDeviceDomain(isAConnectedDevice)
+            ?.map { btDevice ->
+                var isConnected = false
+                if (!isConnected(btDevice)) {
+                    btDevice.address?.let { disconnectedDeviceAddress ->
+                        PLog.d("Device is not currently connected to BT: ${bluetoothDevice?.name}")
+                        deleteConnectedDeviceIfExists(disconnectedDeviceAddress)
+                    }
+                } else isConnected = true
+                PLog.d("bonded devices - current = ${btDevice.name ?: "unidentified"}")
+                btDevice.toBluetoothDeviceDomain(isConnected)
             }
             ?.also { devices ->
                 devices.sortedBy { it.isConnected }
@@ -315,13 +360,11 @@ class BluetoothService(
         PLog.d("Here the peer will receive the device = $device")
 
         startListeningForIncomingMessages()
-
-        device?.let { _deviceFlow.emit(device) }
     }
 
     override fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived> = _messageFlow.asSharedFlow()
 
-    override fun getDeviceConnected(): SharedFlow<BluetoothDeviceDomain> = _deviceFlow.asSharedFlow()
+    override fun getToastMessages(): SharedFlow<String> = _toastMessage.asSharedFlow()
 
     override suspend fun startListeningForIncomingMessages() {
         PLog.d("startListeningForIncomingMessages")

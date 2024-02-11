@@ -8,8 +8,10 @@ import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
 import com.example.peer2peer.domain.BluetoothController
 import com.example.peer2peer.domain.BluetoothDeviceDomain
 import com.example.peer2peer.domain.model.BluetoothDevice
+import com.example.peer2peer.ui.common.DebounceOnClickEvent
 import com.example.peer2peer.ui.pairing.effect.PairingEffect
 import com.example.peer2peer.ui.pairing.event.PairingEvent
+import com.example.peer2peer.ui.pairing.state.BluetoothPairingScreenUIState
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
 import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,12 +32,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class BluetoothViewModel @Inject constructor(
+class BluetoothPairingScreenViewModel @Inject constructor(
     private val bluetoothController: BluetoothController,
     private val connectedDeviceRepository: ConnectedDeviceRepository
 ): ViewModel() {
 
-    private val _uiState = MutableStateFlow(BluetoothUIState())
+    lateinit var debounceClickEvent: DebounceOnClickEvent
+
+    private val _uiState = MutableStateFlow(BluetoothPairingScreenUIState())
     val uiState = combine(
         bluetoothController.scannedDevices,
         bluetoothController.pairedDevices,
@@ -43,10 +47,12 @@ class BluetoothViewModel @Inject constructor(
     ) { scannedDevices, pairedDevices, uiState ->
         uiState.copy(
             scannedDevices = scannedDevices,
-            pairedDevices = pairedDevices,
-            messagesReceived = if (uiState.isConnected) uiState.messagesReceived else emptyList()
+            pairedDevices = pairedDevices
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value)
+
+    private val _bluetoothControllerUIState = MutableStateFlow(BluetoothUIState())
+    val bluetoothControllerUIState = _bluetoothControllerUIState.asStateFlow()
 
     private val _bottomSheetUIState = MutableStateFlow(PairingBottomSheetUIState())
     val bottomSheetUIState = _bottomSheetUIState.asStateFlow()
@@ -62,25 +68,40 @@ class BluetoothViewModel @Inject constructor(
 
     fun onEvent(event: PairingEvent) {
         when (event) {
-            is PairingEvent.OnRefreshClicked -> startScan()
-            is PairingEvent.OnClickNearbyDevice -> onClickNearbyDevice(event.device)
-            is PairingEvent.OnClickPairedDevice -> onClickPairedDevice(event.device)
+            is PairingEvent.OnScanClicked ->
+                debounceClickEvent.onClick { startScan() }
+            is PairingEvent.OnStopScanning -> debounceClickEvent.onClick { stopScan() }
+            is PairingEvent.OnClickNearbyDevice ->
+                debounceClickEvent.onClick { onClickNearbyDevice(event.device) }
+            is PairingEvent.OnClickPairedDevice ->
+                debounceClickEvent.onClick { onClickPairedDevice(event.device) }
             is PairingEvent.OnClickMoreVert -> onClickMoreVert(event.device)
-            is PairingEvent.OnClickDiscoverable -> onClickDiscoverable()
+            is PairingEvent.OnClickDiscoverable ->
+                debounceClickEvent.onClick { onClickDiscoverable() }
             is PairingEvent.OnClickDoneBottomSheet -> closeBottomSheet()
-            is PairingEvent.OnBackClicked -> onBackClicked()
-            is PairingEvent.OnSendClicked -> sendMessage("Yo")
+            is PairingEvent.OnBackClicked ->
+                debounceClickEvent.onClick { onBackClicked() }
+            is PairingEvent.OnSendClicked ->
+                debounceClickEvent.onClick { sendMessage("Yo") }
+            is PairingEvent.OnClickRenameDevice -> renameDevice(event.address)
+            is PairingEvent.OnClickRemoveDevice -> debounceClickEvent.onClick {
+                unpairDevice(event.address)
+            }
         }
     }
 
-    fun startObservingBluetoothController() {
-        bluetoothController.isConnected.onEach { isConnected ->
-            _bottomSheetUIState.update { it.copy(isConnected = isConnected) }
-        }.launchIn(viewModelScope)
+    private fun unpairDevice(address: String) = viewModelScope.launch {
+        bluetoothController.unpairDevice(address)
+    }
 
+    private fun renameDevice(address: String) {
+
+    }
+
+    fun startObservingBluetoothController() {
         bluetoothController.device.onEach { device ->
             PLog.d("bluetoothController.device -> $device")
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 connectedDevice = device
             )}
 
@@ -93,8 +114,13 @@ class BluetoothViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
+        bluetoothController.getToastMessages().onEach { message ->
+            showToastMessage(message)
+        }.launchIn(viewModelScope)
+
         bluetoothController.errors.onEach { error ->
-            _uiState.update { it.copy(errorMessage = error) }
+            _bluetoothControllerUIState.update { it.copy(errorMessage = error) }
+            showToastMessage(message = error)
         }.launchIn(viewModelScope)
     }
 
@@ -113,11 +139,11 @@ class BluetoothViewModel @Inject constructor(
     private fun onClickDiscoverable() = viewModelScope.launch {
         if (uiState.value.discoverableSwitchIsChecked) {
             _uiState.update { it.copy(discoverableSwitchIsChecked = false) }
-//            bluetoothController.stopServer()
+            bluetoothController.stopServer()
         } else {
             _uiState.update { it.copy(discoverableSwitchIsChecked = true) }
             discoverable?.invoke()
-//            bluetoothController.startBluetoothServer()
+            bluetoothController.startBluetoothServer()
             delay(30000)
         }
     }
@@ -160,9 +186,9 @@ class BluetoothViewModel @Inject constructor(
 
     private fun sendMessage(message: String) = viewModelScope.launch {
         PLog.d("Sending message")
-        val bluetoothMessage = bluetoothController.trySendMessage(message)
+        val bluetoothMessage = bluetoothController.trySendMessage()
         if (bluetoothMessage != null) {
-            _uiState.update { it.copy(
+            _bluetoothControllerUIState.update { it.copy(
                 messagesSent = it.messagesSent + bluetoothMessage
             ) }
         }
@@ -177,5 +203,8 @@ class BluetoothViewModel @Inject constructor(
         stopScan()
     }
 
-    private fun stopScan() = bluetoothController.stopDiscovery()
+    private fun stopScan() {
+        _uiState.update { it.copy(isBTScanRefreshing = false) }
+        bluetoothController.stopDiscovery()
+    }
 }
