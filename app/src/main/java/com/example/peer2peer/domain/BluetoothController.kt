@@ -21,6 +21,8 @@ interface BluetoothController {
 
     fun startBluetoothServer()
 
+    suspend fun unpairDevice(address: String)
+
     fun disconnectFromBT()
 
     fun connectToDevice(device: BluetoothDevice)

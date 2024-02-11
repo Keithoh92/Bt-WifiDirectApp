@@ -229,6 +229,23 @@ class BluetoothService(
     }
 
     @SuppressLint("MissingPermission")
+    override suspend fun unpairDevice(address: String) {
+        val device = bluetoothAdapter?.bondedDevices?.find { it.address == address }
+        try {
+            val method = device?.javaClass?.getMethod("removeBond")
+            method?.invoke(device)
+            updatePairedDevices()
+        } catch (e: Exception) {
+            PLog.e("Something wrong trying to unpair device: ${device?.name}", e)
+            showToast(stringResHelper.getString(R.string.failed_unpairing))
+        }
+    }
+
+    private suspend fun showToast(message: String) {
+        _toastMessage.emit(message)
+    }
+
+    @SuppressLint("MissingPermission")
     override fun startDiscovery() {
         PLog.d("Registering foundDeviceReceiver")
         context.registerReceiver(
