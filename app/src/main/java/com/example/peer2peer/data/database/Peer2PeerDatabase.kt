@@ -11,7 +11,7 @@ import com.example.peer2peer.data.database.entity.ConnectedDevice
 import com.example.peer2peer.data.database.entity.DateConverter
 import com.example.peer2peer.data.database.entity.PairedDevice
 
-@Database(entities = [PairedDevice::class, ConnectedDevice::class], version = 3, exportSchema = false)
+@Database(entities = [PairedDevice::class, ConnectedDevice::class], version = 6, exportSchema = false)
 @TypeConverters(DateConverter::class)
 abstract class Peer2PeerDatabase : RoomDatabase() {
 

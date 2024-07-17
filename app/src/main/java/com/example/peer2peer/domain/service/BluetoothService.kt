@@ -18,18 +18,21 @@ import com.example.peer2peer.common.StringResHelper
 import com.example.peer2peer.common.log.PLog
 import com.example.peer2peer.data.BluetoothStateReceiver
 import com.example.peer2peer.data.FoundDeviceReceiver
-import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
+import com.example.peer2peer.data.database.repository.PairedDeviceRepository
 import com.example.peer2peer.data.toBluetoothDeviceDomain
 import com.example.peer2peer.data.toConnectedDevice
-import com.example.peer2peer.domain.BluetoothController
-import com.example.peer2peer.domain.BluetoothDataTransferService
+import com.example.peer2peer.data.toPairedDevice
 import com.example.peer2peer.domain.BluetoothDeviceDomain
+import com.example.peer2peer.domain.controller.BluetoothController
+import com.example.peer2peer.domain.enums.BluetoothMessageType
+import com.example.peer2peer.domain.model.BluetoothMessage
 import com.example.peer2peer.domain.model.BluetoothMessageReceived
 import com.example.peer2peer.domain.model.BluetoothMessageSend
-import com.example.peer2peer.domain.toByteArray
+import com.example.peer2peer.domain.timemanager.TimeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,14 +43,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.joda.time.DateTime
 import java.io.IOException
 import java.lang.reflect.Method
 import java.util.UUID
 
 class BluetoothService(
     private val context: Context,
-    private val connectedDeviceRepository: ConnectedDeviceRepository,
+    private val pairedDeviceRepository: PairedDeviceRepository,
+    private val timeManager: TimeManager,
     private val stringResHelper: StringResHelper,
 ) : Service(), BluetoothController {
 
@@ -57,6 +60,8 @@ class BluetoothService(
 
     private var dataTransferService: BluetoothDataTransferService? = null
     private var job: Job? = null
+    private var pingJob: Job? = null
+    private var receivedPong = false
 
     inner class BluetoothBinder : Binder() {
         fun getService(): BluetoothService = this@BluetoothService
@@ -103,7 +108,6 @@ class BluetoothService(
 
     private val foundDeviceReceiver = FoundDeviceReceiver { device ->
         _scannedDevices.update { devices ->
-            Log.d("foundDeviceReceiver", "foundDeviceReceiver device = $device?")
             val newDevice = device.toBluetoothDeviceDomain(false)
             if (newDevice in devices) devices else devices + newDevice
         }
@@ -118,20 +122,24 @@ class BluetoothService(
         }
     }
 
-    private fun deleteConnectedDeviceIfExists(address: String) {
+    private fun deleteConnectedDeviceIfExists(btDevice: BluetoothDevice) {
         PLog.d("Checking if the device exists in DB")
         CoroutineScope(Dispatchers.IO).launch {
-            if (connectedDeviceRepository.exists(address)) {
-                PLog.d("The device exists, deleting..")
-                connectedDeviceRepository.delete(address)
-            }
+            pairedDeviceRepository.updateConnectionStatus(isConnected = false, btDevice.address)
+        }
+    }
+
+    private fun deviceDisconnected(btDevice: BluetoothDevice) {
+        CoroutineScope(Dispatchers.IO).launch {
+
         }
     }
 
     @SuppressLint("MissingPermission")
     private val bluetoothStateReceiver = BluetoothStateReceiver { isConnected, bluetoothDevice ->
+        PLog.d("BluetoothStateReceiver received device = $bluetoothDevice")
         updateConnectionInDB(isConnected, bluetoothDevice)
-
+        // This is when a device is paired or when a paired device is connected
         if (bluetoothAdapter?.bondedDevices?.contains(bluetoothDevice) == true) {
             updatePairedDevices(bluetoothDevice)
         } else {
@@ -143,29 +151,30 @@ class BluetoothService(
 
     private fun updateConnectionInDB(isConnected: Boolean, bluetoothDevice: BluetoothDevice) =
         CoroutineScope(Dispatchers.IO).launch {
-            val devicesInDBBefore = connectedDeviceRepository.getAllConnectedDevices()
-            devicesInDBBefore.forEach {
-                PLog.d("Devices in DB before updating = $it")
-            }
             val device = bluetoothDevice.toConnectedDevice()
 
             if (isConnected) {
                 PLog.d("Device connected = $bluetoothDevice")
                 _device.update { bluetoothDevice.toBluetoothDeviceDomain(true) }
-                PLog.d("Inserting device to DB")
-                connectedDeviceRepository.insert(device)
-                showToast(stringResHelper.getString(R.string.connected_to, device.name))
+                PLog.d("Updating connection status device to DB")
+                pairedDeviceRepository.updateConnectionStatus(
+                    isConnected = true,
+                    macAddress = device.macAddress
+                )
             } else {
                 PLog.d("Deleting device from DB")
                 _device.update { BluetoothDeviceDomain("", "", false) }
-                connectedDeviceRepository.delete(device.macAddress)
-                showToast(stringResHelper.getString(R.string.disconnected_from_device, device.name))
+                pairedDeviceRepository.updateConnectionStatus(
+                    isConnected = false,
+                    macAddress = device.macAddress
+                )
             }
+    }
 
-            val devices = connectedDeviceRepository.getAllConnectedDevices()
-            devices.forEach {
-                PLog.d("Devices in DB after updating = $it")
-            }
+    private suspend fun getAllPairedDevices(): List<BluetoothDeviceDomain> {
+        return pairedDeviceRepository.getAllPairedDevices().map {
+            it.toBluetoothDeviceDomain()
+        }
     }
 
     init {
@@ -204,10 +213,11 @@ class BluetoothService(
                             null
                         }
 
-                        PLog.d("is CurrentClientSocket null = ${currentClientSocket == null}")
                         PLog.d("accepted connection")
 
-                        currentClientSocket?.let { clientSocket -> handleConnectedClient(clientSocket) }
+                        currentClientSocket?.let { clientSocket ->
+                            handleConnectedClient(clientSocket)
+                        }
                     }
                 } catch (e: IOException) {
                     e.printStackTrace()
@@ -218,10 +228,8 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     override fun connectToDevice(device: BluetoothDeviceDomain) {
-        Log.d("connectToDevice", "connectToDevice called")
         job = Job()
         job?.let {
-            Log.d("connectToDevice", "connectToDevice job started")
             CoroutineScope(Dispatchers.IO + it).launch {
                 try {
                     currentClientSocket = bluetoothAdapter
@@ -229,8 +237,6 @@ class BluetoothService(
                         ?.createRfcommSocketToServiceRecord(UUID.fromString(SERVICE_UUID))
 
                     currentClientSocket?.connect()
-                    PLog.d("currentClientSocket.connect()")
-                    PLog.d("currentClientSocket is null? = ${currentClientSocket == null}")
 
                     currentClientSocket?.let { clientSocket ->
                         handleConnectedClient(clientSocket, device)
@@ -282,22 +288,68 @@ class BluetoothService(
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    override suspend fun trySendMessage(): BluetoothMessageSend? {
+    override suspend fun trySendMessage(
+        message: String?,
+        bluetoothMessageType: BluetoothMessageType,
+    ): BluetoothMessageSend? {
         PLog.d("trying to send message")
         if (dataTransferService == null) {
             PLog.d("dataTransferService == null")
             return null
         }
 
-        val timeSent = DateTime.now()
-        val senderDeviceInfo = "${bluetoothAdapter?.name ?: "Unidentified"};${bluetoothAdapter?.address ?: "Unidentified address"};${timeSent}"
-        val bluetoothMessageSend = BluetoothMessageSend(
-            senderDeviceAndMessage = senderDeviceInfo,
-            timeSent = DateTime.now()
+        val btMessage = BluetoothMessage(
+            messageType = bluetoothMessageType.type,
+            senderDeviceName = bluetoothAdapter?.name,
+            senderDeviceAddress = bluetoothAdapter?.address,
+            message = message,
+            time = timeManager.getCurrentTime()
+        ).setMessage
+
+        val btMessageSend = BluetoothMessageSend(
+            messageType = bluetoothMessageType.type,
+            senderDeviceAndMessage = btMessage
         )
 
-        dataTransferService?.sendMessage(bluetoothMessageSend.toByteArray())
-        return bluetoothMessageSend
+        dataTransferService?.sendMessage(btMessage.toByteArray())
+        return btMessageSend
+    }
+
+    private fun calibrateTimeWithMastersClock(bluetoothMessageReceived: BluetoothMessageReceived) {
+        timeManager.setMasterTime(bluetoothMessageReceived.timeSent)
+    }
+
+    private suspend fun sendTimeToPeer() {
+        trySendMessage(null, BluetoothMessageType.TIME_CALIBRATION)
+    }
+
+    private suspend fun processStandardMessage(bluetoothMessageReceived: BluetoothMessageReceived) {
+        _messageFlow.emit(bluetoothMessageReceived)
+    }
+
+    private suspend fun startPingTaskMaster() {
+        pingJob = CoroutineScope(Dispatchers.IO).launch {
+            delay(BluetoothDataTransferService.WAIT_TO_PING_INTERVAL_MS)
+            trySendMessage(BluetoothDataTransferService.PING, BluetoothMessageType.PING)
+            waitForPongMaster()
+        }
+    }
+
+    private suspend fun waitForPongMaster() {
+        delay(BluetoothDataTransferService.WAIT_FOR_PONG_INTERVAL)
+        if (!receivedPong) {
+            pairedDeviceRepository.updateConnectionStatus(isConnected = false, device.value.address)
+            PLog.d("Never received pong, disconnecting peer")
+        } else {
+            PLog.d("Received pong")
+            receivedPong = false
+            startPingTaskMaster()
+        }
+    }
+
+    override suspend fun pongMaster() {
+        if (dataTransferService == null) return
+        trySendMessage(BluetoothDataTransferService.PONG, BluetoothMessageType.PONG)
     }
 
     override fun closeConnection() {
@@ -335,31 +387,55 @@ class BluetoothService(
             ?.map { btDevice ->
                 var isConnected = false
                 if (!isConnected(btDevice)) {
-                    btDevice.address?.let { disconnectedDeviceAddress ->
-                        PLog.d("Device is not currently connected to BT: ${bluetoothDevice?.name}")
-                        deleteConnectedDeviceIfExists(disconnectedDeviceAddress)
-                    }
-                } else isConnected = true
-                PLog.d("bonded devices - current = ${btDevice.name ?: "unidentified"}")
+                    deleteConnectedDeviceIfExists(btDevice)
+                } else {
+                    isConnected = true
+                }
+
                 btDevice.toBluetoothDeviceDomain(isConnected)
             }
             ?.also { devices ->
-                devices.sortedBy { it.isConnected }
-                _pairedDevices.update { devices }
+                CoroutineScope(Dispatchers.IO).launch {
+                    managePairedDevices(devices)
+                }
             }
     }
 
-    private suspend fun handleConnectedClient(socket: BluetoothSocket, device: BluetoothDeviceDomain? = null) {
-        PLog.d("handling connection before return flow")
+    private suspend fun managePairedDevices(devices: List<BluetoothDeviceDomain>) {
+        val pairedDevices = getAllPairedDevices()
+        val devicesInDBNotPaired = pairedDevices.filterNot { devices.contains(it) }
+        devicesInDBNotPaired.forEach { pairedDeviceRepository.deleteBy(it.address) }
+
+        val pairedDevicesNotInDB = devices.filterNot { pairedDevices.contains(it) }
+        pairedDevicesNotInDB.forEach { pairedDeviceRepository.insert(it.toPairedDevice()) }
+
+        _pairedDevices.update { devices.sortedBy { it.isConnected } }
+    }
+
+    private suspend fun handleConnectedClient(
+        socket: BluetoothSocket,
+        device: BluetoothDeviceDomain? = null,
+    ) {
         val inputStream = socket.inputStream
         val outputStream = socket.outputStream
 
-        val service = BluetoothDataTransferService(inputStream, outputStream)
+        val service = BluetoothDataTransferService(inputStream, outputStream, timeManager)
         dataTransferService = service
-        PLog.d("dataTransferService is $dataTransferService")
-        PLog.d("Here the peer will receive the device = $device")
+        PLog.d("Connection has been established with peer")
+        if (device != null) {
+            pairedDeviceRepository.insert(device.toPairedDevice())
+        } else {
+            PLog.d("Device was null")
+            // Master starts the Ping process -> should be the only one to send out pings
+            managePeers()
+        }
 
         startListeningForIncomingMessages()
+    }
+
+    private suspend fun managePeers() {
+        startPingTaskMaster()
+        sendTimeToPeer()
     }
 
     override fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived> = _messageFlow.asSharedFlow()
@@ -370,8 +446,34 @@ class BluetoothService(
         PLog.d("startListeningForIncomingMessages")
         dataTransferService?.getMessageFlow()?.onEach {
             PLog.d("Message received? = $it")
+            when (it.messageType) {
+                BluetoothMessageType.STANDARD_MESSAGE -> processStandardMessage(it)
+                BluetoothMessageType.TIME_CALIBRATION -> {
+                    calibrateTimeWithMastersClock(it)
+                    return@onEach
+                }
+                BluetoothMessageType.PING, BluetoothMessageType.PONG -> {
+                    managePingPong(it)
+                    return@onEach
+                }
+            }
+
             _messageFlow.emit(it)
         }?.launchIn(CoroutineScope(Dispatchers.IO))
+    }
+
+    private suspend fun managePingPong(bluetoothMessageReceived: BluetoothMessageReceived) {
+        if (bluetoothMessageReceived.messageType == BluetoothMessageType.PING) {
+            pongMaster()
+        }
+        if (bluetoothMessageReceived.messageType == BluetoothMessageType.PONG) {
+            receivedPongFromPeer()
+        }
+    }
+
+    private fun receivedPongFromPeer() {
+        PLog.d("Peer is still connected")
+        receivedPong = true
     }
 
     companion object {

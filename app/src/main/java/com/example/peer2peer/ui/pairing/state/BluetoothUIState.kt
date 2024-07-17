@@ -31,8 +31,8 @@ data class BluetoothUIState(
                 latestReceivedMessage?.timeSent,
                 latestReceivedMessage?.timeReceived
             )
-            val secondsDifference = abs(duration.standardSeconds / 1.0)
-            val time = String.format("%.0f", secondsDifference)
+            val secondsDifference = duration.millis / 1000.0
+            val time = String.format("%.02f", secondsDifference)
             "$time seconds"
         }
 

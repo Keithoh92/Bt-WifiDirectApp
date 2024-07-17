@@ -10,5 +10,7 @@ data class PairedDevice(
     val id: Int,
     val name: String,
     val macAddress: String,
+    val isMaster: Boolean,
+    val isConnected: Boolean,
     val timeLastConnected: Date
 )
