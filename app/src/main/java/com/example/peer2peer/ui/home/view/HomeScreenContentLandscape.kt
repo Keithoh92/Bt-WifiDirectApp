@@ -28,6 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.peer2peer.R
 import com.example.peer2peer.domain.BluetoothDeviceDomain
+import com.example.peer2peer.domain.enums.BluetoothMessageType
 import com.example.peer2peer.domain.model.BluetoothMessageReceived
 import com.example.peer2peer.ui.compose.CardTextField
 import com.example.peer2peer.ui.home.HomeScreen
@@ -246,6 +247,7 @@ fun HomeScreenPreview() {
                                 isFromLocalUser = false,
                                 timeSent = DateTime.now(),
                                 timeReceived = DateTime.now(),
+                                messageType = BluetoothMessageType.STANDARD_MESSAGE,
                                 sizeOfMessage = "254kb"
                             )
                         )

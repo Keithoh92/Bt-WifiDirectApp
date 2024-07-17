@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.peer2peer.domain.BluetoothDeviceDomain
+import com.example.peer2peer.domain.enums.BluetoothMessageType
 import com.example.peer2peer.domain.model.BluetoothMessageReceived
 import com.example.peer2peer.ui.compose.DialogType
 import com.example.peer2peer.ui.compose.P2PDialog
@@ -110,6 +111,7 @@ fun HomeScreenPreview() {
                                 isFromLocalUser = false,
                                 timeSent = DateTime.now(),
                                 timeReceived = DateTime.now(),
+                                messageType = BluetoothMessageType.STANDARD_MESSAGE,
                                 sizeOfMessage = "254kb"
                             )
                         )

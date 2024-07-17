@@ -182,7 +182,12 @@ fun BluetoothPairingScreenContent(
                                             .fillMaxWidth()
                                             .padding(16.dp)
                                     ) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.clickable {
+                                                onEvent(PairingEvent.OnClickPairedDevice(device))
+                                            }
+                                        ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Bluetooth,
                                                 contentDescription = null,

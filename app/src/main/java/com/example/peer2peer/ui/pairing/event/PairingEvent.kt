@@ -8,7 +8,6 @@ sealed class PairingEvent {
     object OnClickDiscoverable : PairingEvent()
     object OnClickDoneBottomSheet : PairingEvent()
     object OnBackClicked : PairingEvent()
-    object OnSendClicked : PairingEvent()
     data class OnClickRenameDevice(val address: String) : PairingEvent()
     data class OnClickRemoveDevice(val address: String) : PairingEvent()
     data class OnClickMoreVert(val device: BluetoothDevice) : PairingEvent()

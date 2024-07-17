@@ -12,9 +12,15 @@ interface PairedDeviceDao {
     @Query("SELECT * FROM paired_devices ORDER BY timeLastConnected DESC")
     fun getAllPairedDevices(): List<PairedDevice>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Query("SELECT * FROM paired_devices WHERE isConnected = 1 LIMIT 1")
+    fun getConnectedDevice(): PairedDevice
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(pairedDevice: PairedDevice): Long
 
-    @Query("DELETE FROM paired_devices WHERE id = :id")
-    fun delete(id: Int)
+    @Query("UPDATE paired_devices SET isConnected = :isConnected WHERE macAddress = :address")
+    fun updateConnectionStatus(isConnected: Boolean, address: String)
+
+    @Query("DELETE FROM paired_devices WHERE macAddress = :address")
+    fun deleteBy(address: String)
 }

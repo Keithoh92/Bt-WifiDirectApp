@@ -8,8 +8,10 @@ import com.example.peer2peer.data.database.Peer2PeerDatabase
 import com.example.peer2peer.data.database.dao.ConnectedDeviceDao
 import com.example.peer2peer.data.database.dao.PairedDeviceDao
 import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
-import com.example.peer2peer.domain.BluetoothController
+import com.example.peer2peer.data.database.repository.PairedDeviceRepository
+import com.example.peer2peer.domain.controller.BluetoothController
 import com.example.peer2peer.domain.service.BluetoothService
+import com.example.peer2peer.domain.timemanager.TimeManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -57,15 +59,29 @@ object AppModule {
     }
 
     @Provides
+    fun providePairedDevicesRepository(pairedDeviceDao: PairedDeviceDao) : PairedDeviceRepository {
+        return PairedDeviceRepository(pairedDeviceDao)
+    }
+
+    @Provides
     fun provideStringResHelper(@ApplicationContext context: Context,) = StringResHelper(context)
+
+    @Provides
+    fun provideTimeManager() = TimeManager()
 
     @Provides
     @Singleton
     fun provideBluetoothController(
         @ApplicationContext context: Context,
-        connectedDeviceRepository: ConnectedDeviceRepository,
+        pairedDeviceRepository: PairedDeviceRepository,
+        timeManager: TimeManager,
         stringResHelper: StringResHelper
     ): BluetoothController {
-        return BluetoothService(context, connectedDeviceRepository, stringResHelper)
+        return BluetoothService(
+            context,
+            pairedDeviceRepository,
+            timeManager,
+            stringResHelper
+        )
     }
 }

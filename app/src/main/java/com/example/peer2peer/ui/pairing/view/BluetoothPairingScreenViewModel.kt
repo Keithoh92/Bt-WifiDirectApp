@@ -4,9 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.peer2peer.common.log.PLog
-import com.example.peer2peer.data.database.repository.ConnectedDeviceRepository
-import com.example.peer2peer.domain.BluetoothController
 import com.example.peer2peer.domain.BluetoothDeviceDomain
+import com.example.peer2peer.domain.controller.BluetoothController
 import com.example.peer2peer.domain.model.BluetoothDevice
 import com.example.peer2peer.ui.common.DebounceOnClickEvent
 import com.example.peer2peer.ui.pairing.effect.PairingEffect
@@ -33,8 +32,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BluetoothPairingScreenViewModel @Inject constructor(
-    private val bluetoothController: BluetoothController,
-    private val connectedDeviceRepository: ConnectedDeviceRepository
+    private val bluetoothController: BluetoothController
 ): ViewModel() {
 
     lateinit var debounceClickEvent: DebounceOnClickEvent
@@ -81,8 +79,6 @@ class BluetoothPairingScreenViewModel @Inject constructor(
             is PairingEvent.OnClickDoneBottomSheet -> closeBottomSheet()
             is PairingEvent.OnBackClicked ->
                 debounceClickEvent.onClick { onBackClicked() }
-            is PairingEvent.OnSendClicked ->
-                debounceClickEvent.onClick { sendMessage("Yo") }
             is PairingEvent.OnClickRenameDevice -> renameDevice(event.address)
             is PairingEvent.OnClickRemoveDevice -> debounceClickEvent.onClick {
                 unpairDevice(event.address)
@@ -94,9 +90,7 @@ class BluetoothPairingScreenViewModel @Inject constructor(
         bluetoothController.unpairDevice(address)
     }
 
-    private fun renameDevice(address: String) {
-
-    }
+    private fun renameDevice(address: String) {}
 
     fun startObservingBluetoothController() {
         bluetoothController.device.onEach { device ->
@@ -181,16 +175,6 @@ class BluetoothPairingScreenViewModel @Inject constructor(
             } else {
                 it.copy(pairedMoreVertClicked = device)
             }
-        }
-    }
-
-    private fun sendMessage(message: String) = viewModelScope.launch {
-        PLog.d("Sending message")
-        val bluetoothMessage = bluetoothController.trySendMessage()
-        if (bluetoothMessage != null) {
-            _bluetoothControllerUIState.update { it.copy(
-                messagesSent = it.messagesSent + bluetoothMessage
-            ) }
         }
     }
 

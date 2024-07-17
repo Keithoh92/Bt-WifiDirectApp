@@ -1,5 +1,7 @@
-package com.example.peer2peer.domain
+package com.example.peer2peer.domain.controller
 
+import com.example.peer2peer.domain.BluetoothDeviceDomain
+import com.example.peer2peer.domain.enums.BluetoothMessageType
 import com.example.peer2peer.domain.model.BluetoothDevice
 import com.example.peer2peer.domain.model.BluetoothMessageReceived
 import com.example.peer2peer.domain.model.BluetoothMessageSend
@@ -26,7 +28,12 @@ interface BluetoothController {
 
     fun connectToDevice(device: BluetoothDevice)
 
-    suspend fun trySendMessage(): BluetoothMessageSend?
+    suspend fun trySendMessage(
+        message: String? = null,
+        bluetoothMessageType: BluetoothMessageType,
+    ): BluetoothMessageSend?
+
+    suspend fun pongMaster()
 
     fun closeConnection()
 
@@ -35,6 +42,7 @@ interface BluetoothController {
     fun release()
 
     suspend fun startListeningForIncomingMessages()
+
 
     fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived>
 
