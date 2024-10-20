@@ -20,14 +20,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.peer2peer.R
 import com.example.peer2peer.domain.model.BluetoothDevice
-import com.example.peer2peer.ui.compose.DialogType
-import com.example.peer2peer.ui.compose.P2PDialog
-import com.example.peer2peer.ui.compose.P2PLoadingDialog
+import com.example.peer2peer.ui.pairing.dialogtype.PairingDialogType
 import com.example.peer2peer.ui.pairing.event.PairingEvent
 import com.example.peer2peer.ui.pairing.state.BluetoothPairingScreenUIState
 import com.example.peer2peer.ui.pairing.state.BluetoothUIState
@@ -35,7 +33,8 @@ import com.example.peer2peer.ui.pairing.state.PairingBottomSheetUIState
 import com.example.peer2peer.ui.pairing.view.BluetoothPairingScreenContent
 import com.example.peer2peer.ui.pairing.view.BluetoothPairingScreenContentLandscape
 import com.example.peer2peer.ui.pairing.view.PairingBottomSheet
-import com.example.peer2peer.ui.pairing.view.PairingScreenTopAppBar
+import com.example.peer2peer.ui.pairing.view.P2PTopAppBar
+import com.example.peer2peer.ui.pairing.view.dialogs.PairingDialogs
 import com.example.peer2peer.ui.theme.P2PTheme3
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,24 +119,10 @@ fun BluetoothPairingScreen(
                 ),
                 sheetElevation = 0.dp,
                 sheetPeekHeight = 0.dp,
-                topBar = { PairingScreenTopAppBar { onEvent(PairingEvent.OnBackClicked) } }
+                topBar = { P2PTopAppBar(R.string.pairing_screen_title) { onEvent(PairingEvent.OnBackClicked) } }
             )
-            AnimatedVisibility(visible = uiState.showDialogType != DialogType.None) {
-                when (val dialog = uiState.showDialogType) {
-                    DialogType.None -> Unit
-                    is DialogType.Loading -> {
-                        P2PLoadingDialog(message = stringResource(id = dialog.messageResId))
-                    }
-
-                    is DialogType.Confirm -> {
-                        P2PDialog(title = stringResource(id = dialog.titleResId),
-                            message = stringResource(id = dialog.messageResId),
-                            confirmButtonText = dialog.confirmButtonLabelResId,
-                            dismissButtonText = dialog.dismissButtonLabelResId,
-                            onDismiss = { dialog.dismissEvent },
-                            onConfirm = { dialog.confirmEvent })
-                    }
-                }
+            AnimatedVisibility(visible = uiState.showDialogType != PairingDialogType.None) {
+                PairingDialogs(dialogType = uiState.showDialogType, onEvent = onEvent)
             }
         }
     }

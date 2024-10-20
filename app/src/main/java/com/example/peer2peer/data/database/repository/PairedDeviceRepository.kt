@@ -24,6 +24,10 @@ class PairedDeviceRepository(private val pairedDeviceDao: PairedDeviceDao) {
             return@withContext pairedDeviceDao.updateConnectionStatus(isConnected, macAddress)
         }
 
+    suspend fun updateDeviceName(newName: String, address: String) = withContext(Dispatchers.IO) {
+        return@withContext pairedDeviceDao.updateDeviceName(newName, address)
+    }
+
     suspend fun deleteBy(deviceAddress: String) = withContext(Dispatchers.IO) {
         return@withContext pairedDeviceDao.deleteBy(deviceAddress)
     }

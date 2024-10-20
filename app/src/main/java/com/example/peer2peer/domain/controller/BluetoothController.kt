@@ -28,6 +28,8 @@ interface BluetoothController {
 
     fun connectToDevice(device: BluetoothDevice)
 
+    fun reloadPairedDevices()
+
     suspend fun trySendMessage(
         message: String? = null,
         bluetoothMessageType: BluetoothMessageType,
@@ -42,7 +44,6 @@ interface BluetoothController {
     fun release()
 
     suspend fun startListeningForIncomingMessages()
-
 
     fun getIncomingMessageFlow(): SharedFlow<BluetoothMessageReceived>
 

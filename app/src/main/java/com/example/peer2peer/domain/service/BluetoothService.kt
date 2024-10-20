@@ -12,7 +12,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import com.example.peer2peer.R
 import com.example.peer2peer.common.StringResHelper
 import com.example.peer2peer.common.log.PLog
@@ -51,7 +50,7 @@ class BluetoothService(
     private val context: Context,
     private val pairedDeviceRepository: PairedDeviceRepository,
     private val timeManager: TimeManager,
-    private val stringResHelper: StringResHelper,
+    private val stringResHelper: StringResHelper
 ) : Service(), BluetoothController {
 
     private val binder = BluetoothBinder()
@@ -272,14 +271,19 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     override fun startDiscovery() {
-        PLog.d("Registering foundDeviceReceiver")
-        context.registerReceiver(
-            foundDeviceReceiver,
-            IntentFilter(BluetoothDevice.ACTION_FOUND)
-        )
+        try {
+            PLog.d("Registering foundDeviceReceiver")
+            context.registerReceiver(
+                foundDeviceReceiver,
+                IntentFilter(BluetoothDevice.ACTION_FOUND)
+            )
 
-        updatePairedDevices()
-        bluetoothAdapter?.startDiscovery()
+            updatePairedDevices()
+            bluetoothAdapter?.startDiscovery()
+        } catch (e: SecurityException) {
+            // Handle the exception if permissions are not granted
+            e.printStackTrace()
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -382,34 +386,52 @@ class BluetoothService(
 
     @SuppressLint("MissingPermission")
     private fun updatePairedDevices(bluetoothDevice: BluetoothDevice? = null) {
-        bluetoothAdapter
-            ?.bondedDevices
-            ?.map { btDevice ->
-                var isConnected = false
-                if (!isConnected(btDevice)) {
-                    deleteConnectedDeviceIfExists(btDevice)
-                } else {
-                    isConnected = true
-                }
+        try {
+            bluetoothAdapter
+                ?.bondedDevices
+                ?.map { btDevice ->
+                    var isConnected = false
+                    if (!isConnected(btDevice)) {
+                        deleteConnectedDeviceIfExists(btDevice)
+                    } else {
+                        isConnected = true
+                    }
 
-                btDevice.toBluetoothDeviceDomain(isConnected)
-            }
-            ?.also { devices ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    managePairedDevices(devices)
+                    btDevice.toBluetoothDeviceDomain(isConnected)
                 }
-            }
+                ?.also { devices ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        managePairedDevices(devices)
+                    }
+                }
+        } catch (e: SecurityException) {
+            // Handle the exception if permissions are not granted
+            e.printStackTrace()
+        }
     }
 
     private suspend fun managePairedDevices(devices: List<BluetoothDeviceDomain>) {
         val pairedDevices = getAllPairedDevices()
-        val devicesInDBNotPaired = pairedDevices.filterNot { devices.contains(it) }
-        devicesInDBNotPaired.forEach { pairedDeviceRepository.deleteBy(it.address) }
 
-        val pairedDevicesNotInDB = devices.filterNot { pairedDevices.contains(it) }
-        pairedDevicesNotInDB.forEach { pairedDeviceRepository.insert(it.toPairedDevice()) }
+        pairedDevices.filterNot { pairedDevice ->
+            devices.any { it.address == pairedDevice.address }
+        }.forEach { pairedDevice ->
+            pairedDeviceRepository.deleteBy(pairedDevice.address)
+        }
 
-        _pairedDevices.update { devices.sortedBy { it.isConnected } }
+        val updatedPairedDevices = pairedDevices.toMutableList()
+        devices.filterNot { bondedDevice ->
+            pairedDevices.any { it.address == bondedDevice.address }
+        }.forEach { bondedDevice ->
+            pairedDeviceRepository.insert(bondedDevice.toPairedDevice())
+            updatedPairedDevices.add(bondedDevice)
+        }
+
+        _pairedDevices.update { updatedPairedDevices.sortedBy { it.isConnected } }
+    }
+
+    override fun reloadPairedDevices() {
+        updatePairedDevices()
     }
 
     private suspend fun handleConnectedClient(

@@ -3,15 +3,14 @@ package com.example.peer2peer.ui
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,13 +38,17 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private lateinit var navController: NavHostController
-
     private lateinit var bluetoothService: BluetoothService
     private var job: Job? = null
-
     private lateinit var bluetoothServiceIntent: Intent
-
     private lateinit var connectedDeviceRepository: ConnectedDeviceRepository
+
+    companion object {
+        @JvmStatic
+        fun getIntent(context: Context): Intent {
+            return Intent(context, MainActivity::class.java)
+        }
+    }
 
     private val bluetoothManager by lazy {
         applicationContext.getSystemService(BluetoothManager::class.java)
@@ -61,46 +64,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         bluetoothServiceIntent = Intent(this, BluetoothService::class.java)
-
-        val enableBluetoothLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) {}
-
-        val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { perms ->
-            val canEnableBluetooth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                perms[android.Manifest.permission.BLUETOOTH_CONNECT] == true
-            } else true
-
-            if (canEnableBluetooth && !isBluetoothEnabled) {
-                enableBluetoothLauncher.launch(
-                    Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                )
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissionLauncher.launch(
-                arrayOf(
-                    android.Manifest.permission.BLUETOOTH_SCAN,
-                    android.Manifest.permission.BLUETOOTH_CONNECT
-                )
-            )
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            permissionLauncher.launch(
-                arrayOf(
-                    android.Manifest.permission.BLUETOOTH,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                    android.Manifest.permission.BLUETOOTH_ADMIN,
-                )
-            )
-        }
-
-        startService(bluetoothServiceIntent)
-        bindService(bluetoothServiceIntent, serviceConnection, BIND_AUTO_CREATE)
 
         setContent {
             P2PTheme {
@@ -118,7 +81,7 @@ class MainActivity : ComponentActivity() {
                         homeScreen(
                             onStartService = { startBluetoothService() },
                             onStopService = { stopBluetoothService() },
-                            goToConnectionScreen = { navController.navigateToBTConnectionScreen() }
+                            goToConnectionScreen = { navController.navigateToBTConnectionScreen() },
                         )
                         bluetoothPairingScreen(
                             onBack = { navController.popBackStack() },

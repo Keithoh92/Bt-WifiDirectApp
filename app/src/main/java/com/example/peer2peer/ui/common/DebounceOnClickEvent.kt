@@ -1,6 +1,7 @@
 package com.example.peer2peer.ui.common
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -15,10 +16,11 @@ class DebounceOnClickEvent(private val coroutineScope: CoroutineScope) {
         start()
     }
 
+    @OptIn(FlowPreview::class)
     private fun start() {
         job = coroutineScope.launch {
             debounceState
-                .debounce(300)
+                .debounce(200)
                 .collect { onClick ->
                     onClick.invoke()
                 }
