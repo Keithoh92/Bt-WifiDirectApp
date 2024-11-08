@@ -52,7 +52,7 @@ fun P2PDialogPreview() {
     P2PTheme3 {
         P2PDialog(
             title = stringResource(id = R.string.error_alert_title),
-            message = stringResource(id = R.string.dialog_something_went_wrong),
+            message = stringResource(id = R.string.something_went_wrong_try_again),
             onDismiss = {},
             onConfirm = {}
         )

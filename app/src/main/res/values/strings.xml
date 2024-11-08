@@ -33,11 +33,18 @@
     <string name="rename_btn">Rename</string>
     <string name="pair_btn">Pair</string>
     <string name="failed_unpairing">Something went wrong trying to unpair device, please try again</string>
+    <string name="pairing_screen_title">BT Pairing Screen</string>
+
+    // PermissionsScreen
+    <string name="permissions_screen_title">Permissions</string>
 
     // Common
-    <string name="dialog_something_went_wrong">Something went wrong, please try again</string>
+    <string name="something_went_wrong_try_again">Something went wrong, please try again</string>
+    <string name="something_went_wrong">Something went wrong</string>
     <string name="error_alert_title">Error</string>
     <string name="please_wait">Please wait…</string>
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
     <string name="disconnected_from_device">Disconnected from %s</string>
     //buttons
     <string name="ok_btn">OK</string>
@@ -45,5 +52,4 @@
     <string name="try_again_btn">Try again</string>
     <string name="scanning">Scanning..</string>
     <string name="stop">Stop</string>
-    <string name="pairing_screen_title">BT Pairing Screen</string>
 </resources>

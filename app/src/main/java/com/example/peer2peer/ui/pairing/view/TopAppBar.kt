@@ -9,14 +9,14 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.peer2peer.R
 
 @Composable
-fun PairingScreenTopAppBar(
+fun P2PTopAppBar(
+    title: Int,
     onBackClicked: () -> Unit
 ) {
     TopAppBar(
-        title = { Text(text = stringResource(R.string.pairing_screen_title)) },
+        title = { Text(text = stringResource(title)) },
         elevation = 10.dp,
         navigationIcon = {
             IconButton(

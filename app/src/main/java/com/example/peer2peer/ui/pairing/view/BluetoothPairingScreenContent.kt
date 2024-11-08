@@ -229,6 +229,7 @@ fun BluetoothPairingScreenContent(
                                             modifier = Modifier.clickable {
                                                 onEvent(
                                                     PairingEvent.OnClickRenameDevice(
+                                                        device.name,
                                                         device.address
                                                     )
                                                 )

@@ -21,6 +21,9 @@ interface PairedDeviceDao {
     @Query("UPDATE paired_devices SET isConnected = :isConnected WHERE macAddress = :address")
     fun updateConnectionStatus(isConnected: Boolean, address: String)
 
+    @Query("UPDATE paired_devices SET name = :newName WHERE macAddress = :address")
+    fun updateDeviceName(newName: String, address: String)
+
     @Query("DELETE FROM paired_devices WHERE macAddress = :address")
     fun deleteBy(address: String)
 }

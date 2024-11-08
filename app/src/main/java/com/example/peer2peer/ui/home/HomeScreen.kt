@@ -79,6 +79,7 @@ fun HomeScreen(
                             onDismiss = { dialog.dismissEvent },
                             onConfirm = { dialog.confirmEvent })
                     }
+                    is DialogType.Error -> TODO()
                 }
             }
         }

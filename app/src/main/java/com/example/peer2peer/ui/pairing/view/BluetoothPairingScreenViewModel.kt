@@ -4,10 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.peer2peer.common.log.PLog
+import com.example.peer2peer.data.database.repository.PairedDeviceRepository
 import com.example.peer2peer.domain.BluetoothDeviceDomain
 import com.example.peer2peer.domain.controller.BluetoothController
 import com.example.peer2peer.domain.model.BluetoothDevice
 import com.example.peer2peer.ui.common.DebounceOnClickEvent
+import com.example.peer2peer.ui.pairing.dialogtype.PairingDialogType
 import com.example.peer2peer.ui.pairing.effect.PairingEffect
 import com.example.peer2peer.ui.pairing.event.PairingEvent
 import com.example.peer2peer.ui.pairing.state.BluetoothPairingScreenUIState
@@ -32,7 +34,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BluetoothPairingScreenViewModel @Inject constructor(
-    private val bluetoothController: BluetoothController
+    private val bluetoothController: BluetoothController,
+    private val pairedDeviceRepository: PairedDeviceRepository
 ): ViewModel() {
 
     lateinit var debounceClickEvent: DebounceOnClickEvent
@@ -79,18 +82,42 @@ class BluetoothPairingScreenViewModel @Inject constructor(
             is PairingEvent.OnClickDoneBottomSheet -> closeBottomSheet()
             is PairingEvent.OnBackClicked ->
                 debounceClickEvent.onClick { onBackClicked() }
-            is PairingEvent.OnClickRenameDevice -> renameDevice(event.address)
+            is PairingEvent.OnClickRenameDevice -> renameDevice(event.deviceName, event.address)
             is PairingEvent.OnClickRemoveDevice -> debounceClickEvent.onClick {
                 unpairDevice(event.address)
             }
+            is PairingEvent.OnDismissRenameDeviceDialog -> dismissDialogs()
+            is PairingEvent.OnConfirmRenameDevice -> onConfirmRenameDevice(event.newName, event.address)
+            is PairingEvent.OnRenameDeviceValueChange -> onRenameDeviceValueChange(event.deviceName, event.address)
         }
+    }
+
+    private fun onRenameDeviceValueChange(deviceName: String, address: String) {
+        _uiState.update {
+            it.copy(showDialogType = PairingDialogType.RenameDevice(deviceName, address))
+        }
+    }
+
+    private fun onConfirmRenameDevice(newName: String, address: String) = viewModelScope.launch {
+        dismissDialogs()
+        PLog.d("newName = $newName")
+        pairedDeviceRepository.updateDeviceName(newName, address)
+        bluetoothController.reloadPairedDevices()
+    }
+
+    private fun dismissDialogs() {
+        _uiState.update { it.copy(showDialogType = PairingDialogType.None) }
     }
 
     private fun unpairDevice(address: String) = viewModelScope.launch {
         bluetoothController.unpairDevice(address)
     }
 
-    private fun renameDevice(address: String) {}
+    private fun renameDevice(deviceName: String, address: String) {
+        _uiState.update {
+            it.copy(showDialogType = PairingDialogType.RenameDevice(deviceName, address))
+        }
+    }
 
     fun startObservingBluetoothController() {
         bluetoothController.device.onEach { device ->
